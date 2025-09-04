@@ -13,19 +13,30 @@
 #include <iostream>
 
 
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Affine/IR/AffineOps.h"
 
 using namespace std;
 using namespace mlir;
 
 
-
+#include "includes/areyDialect.h"
+#include "includes/areyOps.h"
 
 
 int main(int argc, char *argv[])
 {
     
-
+    mlir::DialectRegistry registry;
+    registry.insert<mlir::func::FuncDialect>();
+    registry.insert<mlir::memref::MemRefDialect>();
+    registry.insert<mlir::arith::ArithDialect>();
+    registry.insert<mlir::affine::AffineDialect>();
+    
     MLIRContext context;
+    context.appendDialectRegistry(registry);
     context.allowUnregisteredDialects();
 
 
@@ -59,7 +70,5 @@ int main(int argc, char *argv[])
 
 
     module->dump();
-
-
     return 0;
 }
