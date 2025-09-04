@@ -34,6 +34,7 @@ int main(int argc, char *argv[])
     registry.insert<mlir::memref::MemRefDialect>();
     registry.insert<mlir::arith::ArithDialect>();
     registry.insert<mlir::affine::AffineDialect>();
+    registry.insert<mlir::arey::AreyDialect>();
     
     MLIRContext context;
     context.appendDialectRegistry(registry);
@@ -56,7 +57,6 @@ int main(int argc, char *argv[])
 
     sourceMgr.AddNewSourceBuffer(std::move(mlirFile), llvm::SMLoc());
 
-    // OwningOpRef<ModuleOp> module2 = ModuleOp::create(UnknownLoc::get(&context));
     OwningOpRef<ModuleOp> module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
 
    
@@ -65,7 +65,6 @@ int main(int argc, char *argv[])
         llvm::errs() << "Failed to parse the MLIR file.\n";
         return 2;
     }
-    
 
 
 

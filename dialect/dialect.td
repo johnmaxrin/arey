@@ -12,7 +12,6 @@ def AreyDialect : Dialect {
     let summary = "A dialect for debuging and prototyping";
     let name = "arey";
     let cppNamespace = "mlir::arey";
-    let useDefaultTypePrinterParser = 1;
 }
 
 // Operations
@@ -25,4 +24,5 @@ class AreyDialectOp<string mnemonic> : Op<AreyDialect, mnemonic>
 def PrintOp : Op<AreyDialect, "print">
 {
     let summary = "Print Op";
+    let assemblyFormat = "attr-dict";
 }

@@ -31,9 +31,8 @@ else()
 endif()
 
 
-include_directories(
-    ${CMAKE_BINARY_DIR}
-)
+include_directories(${CMAKE_BINARY_DIR})
+include_directories(${CMAKE_SOURCE_DIR})
 
 include_directories(${LLVM_INCLUDE_DIRS})
 include_directories(${MLIR_INCLUDE_DIRS})
@@ -49,7 +48,7 @@ add_subdirectory(dialect)
 
 
 
-add_llvm_executable(app main.cc  DEPENDS MLIRAreyDialectIncGen)
+add_llvm_executable(app main.cc libs/areyDialect.cc DEPENDS MLIRAreyDialectIncGen)
 target_link_libraries(app 
 
 PRIVATE
