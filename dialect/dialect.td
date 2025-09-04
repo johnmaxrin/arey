@@ -14,3 +14,15 @@ def AreyDialect : Dialect {
     let cppNamespace = "mlir::arey";
     let useDefaultTypePrinterParser = 1;
 }
+
+// Operations
+
+class AreyDialectOp<string mnemonic> : Op<AreyDialect, mnemonic>
+{
+    let summary = "Arey Dialect Operations Class";
+}
+
+def PrintOp : Op<AreyDialect, "print">
+{
+    let summary = "Print Op";
+}
