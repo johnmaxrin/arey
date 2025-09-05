@@ -27,3 +27,10 @@ def PrintOp : Op<AreyDialect, "print">
     let arguments = (ins AnyType : $printArg);
     let assemblyFormat = "$printArg `:` type($printArg) attr-dict";
 }
+
+def PrintStringOp : Op<AreyDialect, "print_str">
+{
+    let summary = "Print String Op";
+    let arguments = (ins StrAttr:$msg);
+    let assemblyFormat = "$msg attr-dict";
+}
