@@ -24,5 +24,6 @@ class AreyDialectOp<string mnemonic> : Op<AreyDialect, mnemonic>
 def PrintOp : Op<AreyDialect, "print">
 {
     let summary = "Print Op";
-    let assemblyFormat = "attr-dict";
+    let arguments = (ins AnyType : $printArg);
+    let assemblyFormat = "$printArg `:` type($printArg) attr-dict";
 }

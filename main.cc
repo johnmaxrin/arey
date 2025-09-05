@@ -28,7 +28,6 @@ using namespace mlir;
 
 int main(int argc, char *argv[])
 {
-    
     mlir::DialectRegistry registry;
     registry.insert<mlir::func::FuncDialect>();
     registry.insert<mlir::memref::MemRefDialect>();
