@@ -12,7 +12,6 @@
 
 #include <iostream>
 
-
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -21,10 +20,10 @@
 using namespace std;
 using namespace mlir;
 
-
 #include "includes/areyDialect.h"
 #include "includes/areyOps.h"
-
+#include "conversion/areyToLLVM.h"
+#include "mlir/Pass/PassManager.h"
 
 int main(int argc, char *argv[])
 {
@@ -34,11 +33,10 @@ int main(int argc, char *argv[])
     registry.insert<mlir::arith::ArithDialect>();
     registry.insert<mlir::affine::AffineDialect>();
     registry.insert<mlir::arey::AreyDialect>();
-    
+
     MLIRContext context;
     context.appendDialectRegistry(registry);
     context.allowUnregisteredDialects();
-
 
     llvm::cl::opt<std::string> inpFileName(llvm::cl::Positional, llvm::cl::desc("<MLIR INP File>"), llvm::cl::Required);
     llvm::cl::ParseCommandLineOptions(argc, argv, "CL Parser\n");
@@ -58,13 +56,20 @@ int main(int argc, char *argv[])
 
     OwningOpRef<ModuleOp> module = mlir::parseSourceFile<mlir::ModuleOp>(sourceMgr, &context);
 
-   
-
-    if (!module) {
+    if (!module)
+    {
         llvm::errs() << "Failed to parse the MLIR file.\n";
         return 2;
     }
 
+
+    mlir::PassManager pm(&context);
+    pm.addPass(mlir::arey::createConvertAreyToLLVMPass());
+
+    if (failed(pm.run(module->getOperation()))) {
+        llvm::errs() << "Failed to run passes\n";
+        return 1;
+    }
 
 
     module->dump();

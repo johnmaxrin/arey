@@ -6,6 +6,7 @@ include "mlir/IR/OpBase.td"
 include "mlir/IR/BuiltinAttributes.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/Pass/PassBase.td"
+include "passes.td"
 
 
 def AreyDialect : Dialect {

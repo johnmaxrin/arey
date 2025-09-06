@@ -47,14 +47,26 @@ get_property(extension_libs GLOBAL PROPERTY MLIR_EXTENSION_LIBS)
 add_subdirectory(dialect)
 
 
+set(NO_RTTI "-fno-rtti")
+add_definitions(${NO_RTTI})
+
+
+
+add_library(AREYTOLLVMConversion conversion/areyToLLVM.cc)
+target_link_libraries(AREYTOLLVMConversion
+  PRIVATE
+    MLIRPass
+    MLIRIR
+    MLIRSupport
+    MLIRAnalysis
+    MLIRParser
+)
+
 
 add_llvm_executable(app main.cc libs/areyDialect.cc DEPENDS MLIRAreyDialectIncGen)
 target_link_libraries(app 
 
 PRIVATE
         ${dialect_libs}
-        MLIRAnalysis
-        MLIRIR
-        MLIRParser
-        MLIRSupport
+        AREYTOLLVMConversion
     )
