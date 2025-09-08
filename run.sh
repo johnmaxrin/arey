@@ -7,4 +7,4 @@ make -j$(nproc)
 cd ..
 
 # Step 2: Run the application with the given testcase
-./build/bin/app testcases/gemm.mlir
+./build/bin/app testcases/gemm.mlir 2>out.mlir
