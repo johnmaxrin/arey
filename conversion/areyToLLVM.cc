@@ -25,10 +25,13 @@ struct ConvertPrintToLLVM : public OpConversionPattern<PrintOp>
 
         std::string fmt;
         Type valTy = val.getType();
-        if (valTy.isa<mlir::IndexType>())
-        {
+
+        if (mlir::isa<mlir::IndexType>(valTy))
             fmt = "%d\n";
-        }
+        else if (mlir::isa<mlir::IntegerType>(valTy))
+            fmt = "%d\n";
+        else if (mlir::isa<LLVM::LLVMPointerType>(valTy))
+            fmt = "%d\n";
 
         fmt.push_back('\0');
 
@@ -43,11 +46,9 @@ struct ConvertPrintToLLVM : public OpConversionPattern<PrintOp>
             LLVM::Linkage::Internal,
             "print_format",
             rewriter.getStringAttr(fmt));
-        
-        
-            //mod.push_back(global);
 
-        // ---- 2. Declare printf if missing ----
+        // mod.push_back(global);
+
         if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf"))
         {
             auto printfType = mlir::LLVM::LLVMFunctionType::get(
@@ -63,20 +64,29 @@ struct ConvertPrintToLLVM : public OpConversionPattern<PrintOp>
 
         auto gep = rewriter.create<mlir::LLVM::GEPOp>(op.getLoc(), ptrTy, arrayType, strPtr, mlir::ValueRange{zero, zero});
 
-        // ---- 3. Call printf with value ----
-
         auto fn = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
         mlir::LLVM::LLVMFunctionType fnType =
-            fn.getFunctionType().cast<mlir::LLVM::LLVMFunctionType>();
+            dyn_cast<mlir::LLVM::LLVMFunctionType>(fn.getFunctionType());
 
+        if (auto ptrTy = mlir::dyn_cast<LLVM::LLVMPointerType>(val.getType()))
+        {
+            // Get the actual type.  
+            val = rewriter.create<LLVM::LoadOp>(loc, rewriter.getI32Type(), val);
+            rewriter.create<mlir::LLVM::CallOp>(
+                op.getLoc(),
+                fn,
+                mlir::ValueRange{gep, val});
+        }
+        else
+        {
+            rewriter.create<mlir::LLVM::CallOp>(
+                op.getLoc(),
+                fn,
+                mlir::ValueRange{gep, val});
+        }
 
-        rewriter.create<mlir::LLVM::CallOp>(
-            op.getLoc(),
-            fn, 
-            mlir::ValueRange{gep});
-
-            rewriter.eraseOp(op); 
-            return success();
+        rewriter.eraseOp(op);
+        return success();
     }
 };
 
@@ -91,18 +101,13 @@ struct ConvertPrintStringToLLVM : public OpConversionPattern<PrintStringOp>
         auto loc = op->getLoc();
         auto mod = op->getParentOfType<mlir::ModuleOp>();
 
-        llvm::errs() << "Here\n";
         auto attr = op->getAttr("msg");
-        auto strAttr = attr.dyn_cast<StringAttr>();
+        auto strAttr = dyn_cast<StringAttr>(attr);
         std::string msg = strAttr.getValue().str();
-
-        
-
 
         auto ctx = rewriter.getContext();
         auto i8Ty = IntegerType::get(ctx, 8);
         auto ptrTy = LLVM::LLVMPointerType::get(ctx);
-
 
         msg.push_back('\0');
 
@@ -117,9 +122,8 @@ struct ConvertPrintStringToLLVM : public OpConversionPattern<PrintStringOp>
             LLVM::Linkage::Internal,
             "msg",
             rewriter.getStringAttr(msg));
-        
-        
-            //mod.push_back(global);
+
+        // mod.push_back(global);
 
         // ---- 2. Declare printf if missing ----
         if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf"))
@@ -141,18 +145,15 @@ struct ConvertPrintStringToLLVM : public OpConversionPattern<PrintStringOp>
 
         auto fn = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
         mlir::LLVM::LLVMFunctionType fnType =
-            fn.getFunctionType().cast<mlir::LLVM::LLVMFunctionType>();
-
+            dyn_cast<mlir::LLVM::LLVMFunctionType>(fn.getFunctionType());
 
         rewriter.create<mlir::LLVM::CallOp>(
             op.getLoc(),
-            fn, 
+            fn,
             mlir::ValueRange{gep});
 
-            rewriter.eraseOp(op); 
-            return success();
-
-        
+        rewriter.eraseOp(op);
+        return success();
     }
 };
 

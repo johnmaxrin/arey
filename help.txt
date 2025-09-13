@@ -1,6 +1,6 @@
 OVERVIEW: MLIR modular optimizer driver
 
-Available Dialects: acc, affine, amdgpu, amx, arith, arm_neon, arm_sme, arm_sve, async, bufferization, builtin, cf, complex, dlti, emitc, func, gpu, index, irdl, linalg, llvm, math, memref, mesh, ml_program, mpi, nvgpu, nvvm, omp, pdl, pdl_interp, polynomial, ptr, quant, rocdl, scf, shape, sparse_tensor, spirv, tensor, test, test_dyn, tosa, transform, ub, vector, x86vector, xegpu
+Available Dialects: acc, affine, amdgpu, amx, arith, arm_neon, arm_sme, arm_sve, async, bufferization, builtin, cf, complex, dlti, emitc, func, gpu, index, irdl, linalg, llvm, math, memref, mesh, ml_program, mpi, nvgpu, nvvm, omp, pdl, pdl_interp, ptr, quant, rocdl, scf, shape, smt, sparse_tensor, spirv, tensor, test, test_dyn, test_irdl_to_cpp, tosa, transform, ub, vector, x86vector, xegpu, xevm
 USAGE: mlir-opt [options] <input file>
 
 OPTIONS:
@@ -12,11 +12,31 @@ Color Options:
 General options:
 
   --abort-on-max-devirt-iterations-reached                   - Abort when the max iterations for devirtualization CGSCC repeat pass is reached
+  --allow-ginsert-as-artifact                                - Allow G_INSERT to be considered an artifact. Hack around AMDGPU test infinite loops.
   --allow-unregistered-dialect                               - Allow operation with no registered dialects
+  --amdgpu-atomic-optimizer-strategy=<value>                 - Select DPP or Iterative strategy for scan
+    =DPP                                                     -   Use DPP operations for scan
+    =Iterative                                               -   Use Iterative approach for scan
+    =None                                                    -   Disable atomic optimizer
+  --amdgpu-bypass-slow-div                                   - Skip 64-bit divide for dynamic 32-bit values
+  --amdgpu-disable-loop-alignment                            - Do not align and prefetch loops
+  --amdgpu-dpp-combine                                       - Enable DPP combiner
+  --amdgpu-dump-hsa-metadata                                 - Dump AMDGPU HSA Metadata
+  --amdgpu-enable-merge-m0                                   - Merge and hoist M0 initializations
+  --amdgpu-indirect-call-specialization-threshold=<uint>     - A threshold controls whether an indirect call will be specialized
+  --amdgpu-kernarg-preload-count=<uint>                      - How many kernel arguments to preload onto SGPRs
+  --amdgpu-module-splitting-max-depth=<uint>                 - maximum search depth. 0 forces a greedy approach. warning: the algorithm is up to O(2^N), where N is the max depth.
+  --amdgpu-promote-alloca-to-vector-limit=<uint>             - Maximum byte size to consider promote alloca to vector
+  --amdgpu-promote-alloca-to-vector-max-regs=<uint>          - Maximum vector size (in 32b registers) to use when promoting alloca
+  --amdgpu-promote-alloca-to-vector-vgpr-ratio=<uint>        - Ratio of VGPRs to budget for promoting alloca to vectors
+  --amdgpu-sdwa-peephole                                     - Enable SDWA peepholer
+  --amdgpu-use-aa-in-codegen                                 - Enable the use of AA during codegen.
+  --amdgpu-verify-hsa-metadata                               - Verify AMDGPU HSA Metadata
+  --amdgpu-vgpr-index-mode                                   - Use GPR indexing mode instead of movrel for vector indexing
+  --arc-contract-use-objc-claim-rv                           - Enable generation of calls to objc_claimAutoreleasedReturnValue
   --atomic-counter-update-promoted                           - Do counter update using atomic fetch add  for promoted counters only
   --atomic-first-counter                                     - Use atomic fetch add for first counter in a function (usually the entry counter)
   --bounds-checking-single-trap                              - Use one trap block per function
-  --bounds-checking-unique-traps                             - Always use one trap per check
   --cfg-hide-cold-paths=<number>                             - Hide blocks with relative frequency below the given value
   --cfg-hide-deoptimize-paths                                - 
   --cfg-hide-unreachable-paths                               - 
@@ -27,7 +47,10 @@ General options:
     =latency                                                 -   Instruction latency
     =code-size                                               -   Code size
     =size-latency                                            -   Code size and latency
+    =all                                                     -   Print all cost kinds
+  --ctx-profile-force-is-specialized                         - Treat the given module as-if it were containing the post-thinlink module containing the root
   --debug-info-correlate                                     - Use debug info to correlate profiles. (Deprecated, use -profile-correlate=debug-info)
+  --debugify-atoms                                           - 
   --debugify-func-limit=<ulong>                              - Set max number of processed functions per pass.
   --debugify-level=<value>                                   - Kind of debug info to add
     =locations                                               -   Locations only
@@ -35,21 +58,25 @@ General options:
   --debugify-quiet                                           - Suppress verbose debugify output
   --disable-auto-upgrade-debug-info                          - Disable autoupgrade of debug info
   --disable-i2p-p2i-opt                                      - Disables inttoptr/ptrtoint roundtrip optimization
+  --disable-promote-alloca-to-lds                            - Disable promote alloca to LDS
+  --disable-promote-alloca-to-vector                         - Disable promote alloca to vector
   --do-counter-promotion                                     - Do counter register promotion
   --dot-cfg-mssa=<file name for generated dot file>          - file name for generated dot file
   --dump-pass-pipeline                                       - Print the pipeline that will be run
   --elide-resource-data-from-bytecode                        - Elide resources when generating bytecode
   --emit-bytecode                                            - Emit bytecode when generating output
   --emit-bytecode-version=<value>                            - Use specified bytecode when generating output
+  --enable-cse-in-irtranslator                               - Should enable CSE in irtranslator
+  --enable-cse-in-legalizer                                  - Should enable CSE in Legalizer
   --enable-gvn-hoist                                         - Enable the GVN hoisting pass (default = off)
   --enable-gvn-memdep                                        - 
+  --enable-gvn-memoryssa                                     - 
   --enable-gvn-sink                                          - Enable the GVN sinking pass (default = off)
   --enable-jump-table-to-switch                              - Enable JumpTableToSwitch pass (default = off)
   --enable-load-in-loop-pre                                  - 
   --enable-load-pre                                          - 
   --enable-loop-simplifycfg-term-folding                     - 
   --enable-name-compression                                  - Enable name/filename string compression
-  --enable-pgo-force-function-attrs                          - Enable pass to set function attributes based on PGO profiles
   --enable-split-backedge-in-load-pre                        - 
   --enable-split-loopiv-heuristic                            - Enable loop iv regalloc heuristic
   --enable-vtable-profile-use                                - If ThinLTO and WPD is enabled and this option is true, vtable profiles will be used by ICP pass for more efficient indirect call sequence. If false, type profiles won't be used.
@@ -60,7 +87,6 @@ General options:
     =optimize                                                -   Optimise without changing ABI
     =lowering                                                -   Change variadic calling convention
   --experimental-debug-variable-locations                    - Use experimental new value-tracking variable locations
-  --experimental-debuginfo-iterators                         - Enable communicating debuginfo positions through iterators, eliminating intrinsics. Has no effect if --preserve-input-debuginfo-format=true.
   --force-tail-folding-style=<value>                         - Force the tail folding style
     =none                                                    -   Disable tail folding
     =data                                                    -   Create lane mask for data only, using active.lane.mask intrinsic
@@ -69,12 +95,12 @@ General options:
     =data-and-control-without-rt-check                       -   Similar to data-and-control, but remove the runtime check
     =data-with-evl                                           -   Use predicated EVL instructions for tail folding. If EVL is unsupported, fallback to data-without-lane-mask.
   --fs-profile-debug-bw-threshold=<uint>                     - Only show debug message if the source branch weight is greater  than this value.
-  --fs-profile-debug-prob-diff-threshold=<uint>              - Only show debug message if the branch probility is greater than this value (in percentage).
+  --fs-profile-debug-prob-diff-threshold=<uint>              - Only show debug message if the branch probability is greater than this value (in percentage).
   --generate-merged-base-profiles                            - When generating nested context-sensitive profiles, always generate extra base profile for function with all its context profiles merged into it.
   --hash-based-counter-split                                 - Rename counter variable of a comdat function based on cfg hash
   --hot-cold-split                                           - Enable hot-cold splitting pass
-  --hwasan-percentile-cutoff-hot=<int>                       - Hot percentile cuttoff.
-  --hwasan-random-rate=<number>                              - Probability value in the range [0.0, 1.0] to keep instrumentation of a function.
+  --hwasan-percentile-cutoff-hot=<int>                       - Hot percentile cutoff.
+  --hwasan-random-rate=<number>                              - Probability value in the range [0.0, 1.0] to keep instrumentation of a function. Note: instrumentation can be skipped randomly OR because of the hot percentile cutoff, if both are supplied.
   --import-all-index                                         - Import all external functions in index.
   --instcombine-code-sinking                                 - Enable code sinking
   --instcombine-guard-widening-window=<uint>                 - How wide an instruction window to bypass looking for another guard
@@ -86,15 +112,18 @@ General options:
   --instrprof-atomic-counter-update-all                      - Make all profile counter updates atomic (for testing only)
   --internalize-public-api-file=<filename>                   - A file containing list of symbol names to preserve
   --internalize-public-api-list=<list>                       - A list of symbol names to preserve
+  --intrinsic-cost-strategy=<value>                          - Costing strategy for intrinsic instructions
+    =instruction-cost                                        -   Use TargetTransformInfo::getInstructionCost
+    =intrinsic-cost                                          -   Use TargetTransformInfo::getIntrinsicInstrCost
+    =type-based-intrinsic-cost                               -   Calculate the intrinsic cost based only on argument types
   --irdl-file=<filename>                                     - IRDL file to register before processing the input
   --iterative-counter-promotion                              - Allow counter promotion across the whole loop nest.
-  --lint-abort-on-error                                      - In the Lint pass, abort on errors.
   --list-passes                                              - Print the list of registered passes and exit
   --load-dialect-plugin=<string>                             - Load dialects from plugin library
   --load-pass-plugin=<string>                                - Load passes from plugin library
   --log-actions-to=<string>                                  - Log action execution to a file, or stderr if  '-' is passed
   --log-mlir-actions-filter=<string>                         - Comma separated list of locations to filter actions from logging
-  --lower-allow-check-percentile-cutoff-hot=<int>            - Hot percentile cuttoff.
+  --lower-allow-check-percentile-cutoff-hot=<int>            - Hot percentile cutoff.
   --lower-allow-check-random-rate=<number>                   - Probability value in the range [0.0, 1.0] of unconditional pseudo-random checks.
   --matrix-default-layout=<value>                            - Sets the default matrix layout
     =column-major                                            -   Use column-major layout
@@ -105,6 +134,11 @@ General options:
   --mir-strip-debugify-only                                  - Should mir-strip-debug only strip debug info from debugified modules by default
   --misexpect-tolerance=<uint>                               - Prevents emitting diagnostics when profile counts are within N% of the threshold..
   --mlir-debug-counter=<string>                              - Comma separated list of debug counter skip and count arguments
+  --mlir-diagnostic-verbosity-level=<value>                  - Choose level of diagnostic information
+    =errors                                                  -   Errors only
+    =warnings                                                -   Errors and warnings
+    =remarks                                                 -   Errors, warnings and remarks
+  --mlir-disable-diagnostic-notes                            - Disable diagnostic notes.
   --mlir-disable-threading                                   - Disable multi-threading within MLIR, overrides any further call to MLIRContext::enableMultiThreading()
   --mlir-elide-elementsattrs-if-larger=<uint>                - Elide ElementsAttrs with "..." that have more elements than the given upper limit
   --mlir-elide-resource-strings-if-larger=<uint>             - Elide printing value of resources if string is too long in chars.
@@ -131,7 +165,7 @@ General options:
   --mlir-print-ir-before-all                                 - Print IR before each pass
   --mlir-print-ir-module-scope                               - When printing IR for print-ir-[before|after]{-all} always print the top-level operation
   --mlir-print-ir-tree-dir=<string>                          - When printing the IR before/after a pass, print file tree rooted at this directory. Use in conjunction with mlir-print-ir-* flags
-  --mlir-print-local-scope                                   - Print with local scope and inline information (eliding aliases for attributes, types, and locations
+  --mlir-print-local-scope                                   - Print with local scope and inline information (eliding aliases for attributes, types, and locations)
   --mlir-print-op-on-diagnostic                              - When a diagnostic is emitted on an operation, also print the operation as an attached note
   --mlir-print-skip-regions                                  - Skip regions when printing ops.
   --mlir-print-stacktrace-on-diagnostic                      - When a diagnostic is emitted, also print the stack trace as an attached note
@@ -141,8 +175,14 @@ General options:
   --mlir-timing-display=<value>                              - Display method for timing data
     =list                                                    -   display the results in a list sorted by total time
     =tree                                                    -   display the results ina with a nested tree view
+  --mlir-use-nameloc-as-prefix                               - Print SSA IDs using NameLocs as prefixes
+  --mlir-very-unsafe-disable-verifier-on-parsing             - Disable the verifier on parsing (very unsafe)
+  --ms-secure-hotpatch-functions-file=<filename>             - A file containing list of mangled function names to mark for Windows Secure Hot-Patching
+  --ms-secure-hotpatch-functions-list=<list>                 - A list of mangled function names to mark for Windows Secure Hot-Patching
   --no-discriminators                                        - Disable generation of discriminator information.
   --no-implicit-module                                       - Disable implicit addition of a top-level module op during parsing
+  --nvptx-approx-log2f32                                     - NVPTX Specific: whether to use lg2.approx for log2
+  --nvptx-sched4reg                                          - NVPTX Specific: schedule for register pressue
   -o <filename>                                              - Output filename
   --object-size-offset-visitor-max-visit-instructions=<uint> - Maximum number of instructions for ObjectSizeOffsetVisitor to look at
   --output-split-marker=<string>                             - Split marker to use for merging the ouput
@@ -150,21 +190,22 @@ General options:
   --pgo-block-coverage                                       - Use this option to enable basic block coverage instrumentation
   --pgo-temporal-instrumentation                             - Use this option to enable temporal instrumentation
   --pgo-view-block-coverage-graph                            - Create a dot file of CFGs with block coverage inference information
-  --poison-checking-function-local                           - Check that returns are non-poison (for testing)
   --print-pipeline-passes                                    - Print a '-passes' compatible string describing the pipeline (best-effort only).
   --profile-actions-to=<string>                              - Profile action execution to a file, or stderr if  '-' is passed
   --profile-correlate=<value>                                - Use debug info or binary file to correlate profiles.
     =<empty>                                                 -   No profile correlation
     =debug-info                                              -   Use debug info to correlate
     =binary                                                  -   Use binary to correlate
+  --promote-alloca-vector-loop-user-weight=<uint>            - The bonus weight of users of allocas within loop when sorting profitable allocas
+  --r600-ir-structurize                                      - Use StructurizeCFG IR pass
   --run-reproducer                                           - Run the pipeline stored in the reproducer
   --runtime-counter-relocation                               - Enable relocating counters at runtime.
   --safepoint-ir-verifier-print-only                         - 
   --sample-profile-check-record-coverage=<N>                 - Emit a warning if less than N% of records in the input profile are matched to the IR.
   --sample-profile-check-sample-coverage=<N>                 - Emit a warning if less than N% of samples in the input profile are matched to the IR.
   --sample-profile-max-propagate-iterations=<uint>           - Maximum number of iterations to go through when propagating sample block/edge weights through the CFG.
-  --sampled-instr-burst-duration=<uint>                      - Set the profile instrumentation burst duration, which can range from 0 to one less than the value of 'sampled-instr-period'. This number of samples will be recorded for each 'sampled-instr-period' count update. Setting to 1 enables simple sampling, in which case it is recommended to set 'sampled-instr-period' to a prime number.
-  --sampled-instr-period=<uint>                              - Set the profile instrumentation sample period. For each sample period, a fixed number of consecutive samples will be recorded. The number is controlled by 'sampled-instr-burst-duration' flag. The default sample period of 65535 is optimized for generating efficient code that leverages unsigned integer wrapping in overflow.
+  --sampled-instr-burst-duration=<uint>                      - Set the profile instrumentation burst duration, which can range from 1 to the value of 'sampled-instr-period' (0 is invalid). This number of samples will be recorded for each 'sampled-instr-period' count update. Setting to 1 enables simple sampling, in which case it is recommended to set 'sampled-instr-period' to a prime number.
+  --sampled-instr-period=<uint>                              - Set the profile instrumentation sample period. A sample period of 0 is invalid. For each sample period, a fixed number of consecutive samples will be recorded. The number is controlled by 'sampled-instr-burst-duration' flag. The default sample period of 65536 is optimized for generating efficient code that leverages unsigned short integer wrapping in overflow, but this is disabled under simple sampling (burst duration = 1).
   --sampled-instrumentation                                  - Do PGO instrumentation sampling
   --show-dialects                                            - Print the list of registered dialects and exit
   --skip-ret-exit-block                                      - Suppress counter promotion if exit blocks contain ret.
@@ -183,12 +224,13 @@ General options:
         --slow-mem-space=<uint>                              - Slow memory space identifier for copy generation (default: 0)
         --tag-mem-space=<uint>                               - Tag memory space identifier for copy generation (default: 0)
       --affine-expand-index-ops                              -   Lower affine operations operating on indices into more fundamental operations
+      --affine-expand-index-ops-as-affine                    -   Lower affine operations operating on indices into affine.apply operations
       --affine-loop-coalescing                               -   Coalesce nested loops with independent bounds into a single loop
       --affine-loop-fusion                                   -   Fuse affine loop nests
-        --fusion-compute-tolerance=<number>                  - Fractional increase in additional computation tolerated while fusing
-        --fusion-fast-mem-space=<uint>                       - Faster memory space number to promote fusion buffers to
-        --fusion-local-buf-threshold=<ulong>                 - Threshold size (KiB) for promoting local buffers to fast memory space
-        --fusion-maximal                                     - Enables maximal loop fusion
+        --compute-tolerance=<number>                         - Fractional increase in additional computation tolerated while fusing
+        --fast-mem-space=<uint>                              - Faster memory space number to promote fusion buffers to
+        --local-buf-threshold=<ulong>                        - Threshold size (KiB) for promoting local buffers to fast memory space
+        --maximal                                            - Enables maximal loop fusion
         --mode=<value>                                       - fusion mode to attempt
     =greedy                                            -   Perform greedy (both producer-consumer and sibling)  fusion
     =producer                                          -   Perform only producer-consumer fusion
@@ -214,7 +256,9 @@ General options:
         --max-nested=<uint>                                  - Maximum number of nested parallel loops to produce. Defaults to unlimited (UINT_MAX).
         --parallel-reductions                                - Whether to parallelize reduction loops. Defaults to false.
       --affine-pipeline-data-transfer                        -   Pipeline non-blocking data transfers between explicitly managed levels of the memory hierarchy
+      --affine-raise-from-memref                             -   Turn some memref operators to affine operators where supported
       --affine-scalrep                                       -   Replace affine memref accesses by scalars by forwarding stores to loads and eliminating redundant loads
+      --affine-simplify-min-max                              -   Simplify affine min/max/apply
       --affine-simplify-structures                           -   Simplify affine expressions in maps/sets and normalize memrefs
       --affine-super-vectorize                               -   Vectorize to a target independent n-D vector abstraction
         --test-fastest-varying=<long>                        - Specify a 1-D, 2-D or 3-D pattern of fastest varying memory dimensions to match. See defaultPatterns in Vectorize.cpp for a description and examples. This is used for testing purposes
@@ -229,6 +273,8 @@ General options:
         --vectorize-affine-loop-nest                         - Enable testing for the 'vectorizeAffineLoopNest' utility by vectorizing the outermost loops found
       --amdgpu-emulate-atomics                               -   Emulate atomic operations on chipsets that do not support them
         --chipset=<string>                                   - Chipset that these operations will run on
+      --amdgpu-maskedload-to-load                            -   Lower the operations from the vector maskedload to vector load
+      --amdgpu-resolve-strided-metadata                      -   Resolve memref.extract_strided_metadata on AMDGPU ops
       --arith-emulate-unsupported-floats                     -   Emulate operations on unsupported floats with extf/truncf
         --source-types=<string>                              - MLIR types without arithmetic support on a given target
         --target-type=<string>                               - MLIR type to convert the unsupported source types to
@@ -236,7 +282,9 @@ General options:
         --widest-int-supported=<uint>                        - Widest integer type supported by the target
       --arith-expand                                         -   Legalize Arith ops to be convertible to LLVM.
         --include-bf16                                       - Enable the BF16 expansion patterns
-      --arith-int-narrowing                                  -   Reduce integer operation bitwidth
+        --include-f4e2m1                                     - Enable the F4E2M1 expansion patterns
+        --include-f8e8m0                                     - Enable the F8E8M0 expansion patterns
+      --arith-int-range-narrowing                            -   Reduce integer operations bitwidth based on integer range analysis
         --int-bitwidths-supported=<uint>                     - Integer bitwidths supported
       --arith-unsigned-when-equivalent                       -   Replace signed ops with unsigned ones where they are proven equivalent
       --arm-neon-2d-to-intr                                  -   Convert Arm NEON structured ops to intrinsics
@@ -252,7 +300,6 @@ General options:
       --async-runtime-ref-counting                           -   Automatic reference counting for Async runtime operations
       --async-runtime-ref-counting-opt                       -   Optimize automatic reference counting operations for theAsync runtime by removing redundant operations
       --async-to-async-runtime                               -   Lower all high level async operations (e.g. async.execute) tothe explicit async.runtime and async.coro operations
-      --buffer-deallocation                                  -   Adds all required dealloc operations for all allocations in the input program
       --buffer-deallocation-simplification                   -   Optimizes `bufferization.dealloc` operation for more efficient codegen
       --buffer-hoisting                                      -   Optimizes placement of allocation operations by moving them into common dominators and out of nested regions
       --buffer-loop-hoisting                                 -   Optimizes placement of allocation operations by moving them out of loop nests
@@ -302,8 +349,16 @@ General options:
         --emulate-lt-32-bit-scalar-types                     - Emulate narrower scalar types with 32-bit ones if not supported by the target
       --convert-complex-to-libm                              -   Convert Complex dialect to libm calls
       --convert-complex-to-llvm                              -   Convert Complex dialect to LLVM dialect
+        --complex-range=<value>                              - Control the intermediate calculation of complex number division
+    =improved                                          -   improved
+    =basic                                             -   basic (default)
+    =none                                              -   none
       --convert-complex-to-spirv                             -   Convert Complex dialect to SPIRV dialect
       --convert-complex-to-standard                          -   Convert Complex dialect to standard dialect
+        --complex-range=<value>                              - Control the intermediate calculation of complex number division
+    =improved                                          -   improved (default)
+    =basic                                             -   basic
+    =none                                              -   none
       --convert-elementwise-to-linalg                        -   Convert ElementwiseMappable ops to linalg
       --convert-func-to-emitc                                -   Convert Func dialect to EmitC dialect
       --convert-func-to-llvm                                 -   Convert from the Func dialect to the LLVM dialect
@@ -311,17 +366,18 @@ General options:
         --use-bare-ptr-memref-call-conv                      - Replace FuncOp's MemRef arguments with bare pointers to the MemRef element types
       --convert-func-to-spirv                                -   Convert Func dialect to SPIR-V dialect
         --emulate-lt-32-bit-scalar-types                     - Emulate narrower scalar types with 32-bit ones if not supported by the target
-      --convert-gpu-launch-to-vulkan-launch                  -   Convert gpu.launch_func to vulkanLaunch external call
       --convert-gpu-to-llvm-spv                              -   Generate LLVM operations to be ingested by a SPIR-V backend for gpu operations
-        --index-bitwidth=<uint>                              - Bitwidth of the index type, 0 to use size of machine word
+        --use-64bit-index                                    - Use 64-bit integers to convert index types
       --convert-gpu-to-nvvm                                  -   Generate NVVM operations for gpu operations
+        --allowed-dialects=<string>                          - Run conversion patterns of only the specified dialects
         --has-redux                                          - Target gpu supports redux
         --index-bitwidth=<uint>                              - Bitwidth of the index type, 0 to use size of machine word
         --use-bare-ptr-memref-call-conv                      - Replace memref arguments in GPU functions with bare pointers. All memrefs must have static shape.
       --convert-gpu-to-rocdl                                 -   Generate ROCDL operations for gpu operations
+        --allowed-dialects=<string>                          - Run conversion patterns of only the specified dialects
         --chipset=<string>                                   - Chipset that these operations will run on
         --index-bitwidth=<uint>                              - Bitwidth of the index type, 0 to use size of machine word
-        --runtime=<value>                                    - Runtime code will be run on (default is Unknown, can also use HIP or OpenCl)
+        --runtime=<value>                                    - Runtime code will be run on (default is Unknown, can also use HIP or OpenCL)
     =unknown                                           -   Unknown (default)
     =HIP                                               -   HIP
     =OpenCL                                            -   OpenCL
@@ -336,6 +392,10 @@ General options:
       --convert-linalg-to-loops                              -   Lower the operations from the linalg dialect into loops
       --convert-linalg-to-parallel-loops                     -   Lower the operations from the linalg dialect into parallel loops
       --convert-linalg-to-std                                -   Convert the operations from the linalg dialect into the Standard dialect
+      --convert-math-to-emitc                                -   Convert some Math operations to EmitC call_opaque operations
+        --language-target=<value>                            - Select the language standard target for callees (c99 or cpp11).
+    =c99                                               -   c99
+    =cpp11                                             -   cpp11
       --convert-math-to-funcs                                -   Convert Math operations to calls of outlined implementations.
         --convert-ctlz                                       - Convert math.ctlz to a software implementation. Enable for targets that do not natively support ctlz.
         --min-width-of-fpowi-exponent=<uint>                 - Convert FPowI only if the width of its exponent's integer type is greater than or equal to this value
@@ -348,6 +408,7 @@ General options:
       --convert-memref-to-spirv                              -   Convert MemRef dialect to SPIR-V dialect
         --bool-num-bits=<int>                                - The number of bits to store a boolean value
         --use-64bit-index                                    - Use 64-bit integers to convert index types
+      --convert-mesh-to-mpi                                  -   Convert Mesh dialect to MPI dialect.
       --convert-nvgpu-to-nvvm                                -   Convert NVGPU dialect to NVVM dialect
       --convert-nvvm-to-llvm                                 -   Convert NVVM to PTX with Inline Assembly in LLVM dialect
       --convert-openacc-to-scf                               -   Convert the OpenACC ops to OpenACC with SCF dialect
@@ -371,12 +432,11 @@ General options:
       --convert-tensor-to-linalg                             -   Convert some Tensor dialect ops to Linalg dialect
       --convert-tensor-to-spirv                              -   Convert Tensor dialect to SPIR-V dialect
         --emulate-lt-32-bit-scalar-types                     - Emulate narrower scalar types with 32-bit ones if not supported by the target
-      --convert-to-llvm                                      -   Convert to LLVM via dialect interfaces found in the input IR
+      --convert-to-emitc                                     -   Convert to EmitC dialect via dialect interfaces
         --filter-dialects=<string>                           - Test conversion patterns of only the specified dialects
-      --convert-to-spirv                                     -   Convert to SPIR-V
-        --convert-gpu-modules                                - Clone and convert GPU modules
-        --run-signature-conversion                           - Run function signature conversion to convert vector types
-        --run-vector-unrolling                               - Run vector unrolling to convert vector types in function bodies
+      --convert-to-llvm                                      -   Convert to LLVM via dialect interfaces found in the input IR
+        --dynamic                                            - Use op conversion attributes to configure the conversion
+        --filter-dialects=<string>                           - Test conversion patterns of only the specified dialects
       --convert-ub-to-llvm                                   -   Convert UB dialect to LLVM dialect
         --index-bitwidth=<uint>                              - Bitwidth of the index type, 0 to use size of machine word
       --convert-ub-to-spirv                                  -   Convert UB dialect to SPIR-V dialect
@@ -385,17 +445,31 @@ General options:
         --use-nvgpu                                          - convert to NvGPU ops instead of GPU dialect ops
       --convert-vector-to-llvm                               -   Lower the operations from the vector dialect into the LLVM dialect
         --enable-amx                                         - Enables the use of AMX dialect while lowering the vector dialect.
+        --enable-arm-i8mm                                    - Enables the use of Arm FEAT_I8MM instructions while lowering the vector dialect.
         --enable-arm-neon                                    - Enables the use of ArmNeon dialect while lowering the vector dialect.
         --enable-arm-sve                                     - Enables the use of ArmSVE dialect while lowering the vector dialect.
         --enable-x86vector                                   - Enables the use of X86Vector dialect while lowering the vector dialect.
         --force-32bit-vector-indices                         - Allows compiler to assume vector indices fit in 32-bit if that yields faster code
         --reassociate-fp-reductions                          - Allows llvm to reassociate floating-point reductions for speed
+        --use-vector-alignment                               - Use the preferred alignment of a vector type in load/store operations instead of the alignment of the element type of the memref. This flag is intended for use with hardware which requiresvector alignment, or in application contexts where it is known all vector access are naturally aligned. 
+        --vector-contract-lowering=<value>                   - control the lowering of `vector.contract` operations.
+    =dot                                               -   Progressively lower to finer grained `vector.contract` and dot-products. (default)
+    =matmul                                            -   Lower to `vector.matrix_multiply`, maps 1-1 to LLVM matrix intrinsics.
+    =outerproduct                                      -   Lower to `vector.outerproduct`.
+    =parallelarith                                     -   Lower contract with all reduction dimensions unrolled to 1 to a vector elementwise operations.
+        --vector-transpose-lowering=<value>                  - control the lowering of `vector.transpose` operations.
+    =eltwise                                           -   Lower transpose into element-wise extract and inserts (default)
+    =flat                                              -   Lower 2-D transpose to `vector.flat_transpose`, maps 1-1 to LLVM matrix intrinsics
+    =shuffle1d                                         -   Lower 2-D transpose to `vector.shuffle` on 1-D vector.
+    =shuffle16x16                                      -   Lower 2-D transpose to `vector.shuffle` on 16x16 vector.
       --convert-vector-to-scf                                -   Lower the operations from the vector dialect into the SCF dialect
         --full-unroll                                        - Perform full unrolling when converting vector transfers to SCF
         --lower-scalable                                     - Add scalable vector specific lowerings (that introduce loops)
         --lower-tensors                                      - Lower transfer ops that operate on tensors
         --target-rank=<uint>                                 - Target vector rank to which transfer ops should be lowered
       --convert-vector-to-spirv                              -   Convert Vector dialect to SPIR-V dialect
+      --convert-vector-to-xegpu                              -   Lower the operations from the vector dialect into the XeGPU dialect
+      --convert-xevm-to-llvm                                 -   Convert XeVM to LLVM dialect
       --cse                                                  -   Eliminate common sub-expressions
       --decorate-spirv-composite-type-layout                 -   Decorate SPIR-V composite type with layout info
       --drop-equivalent-buffer-results                       -   Remove MemRef return values that are equivalent to a bbArg
@@ -430,25 +504,26 @@ General options:
         --index-bitwidth=<uint>                              - Bitwidth of the index type, 0 to use size of machine word
         --use-aligned-alloc                                  - Use aligned_alloc in place of malloc for heap allocations
         --use-generic-functions                              - Use generic allocation and deallocation functions instead of the classic 'malloc', 'aligned_alloc' and 'free' functions
-      --finalizing-bufferize                                 -   Finalize a partial bufferization
+      --flatten-memref                                       -   Flatten a multiple dimensional memref to 1-dimensional
       --fold-memref-alias-ops                                -   Fold memref alias ops into consumer load/store ops
       --fold-tensor-subset-ops                               -   Fold tensor subset ops into producer/consumer ops
       --form-expressions                                     -   Form C-style expressions from C-operator ops
-      --func-bufferize                                       -   Bufferize func/call/return ops
       --generate-runtime-verification                        -   Generate additional runtime op verification checks
       --gpu-async-region                                     -   Make GPU ops async
       --gpu-decompose-memrefs                                -   Decomposes memref index computation into explicit ops.
       --gpu-eliminate-barriers                               -   Erase unnecessary barriers
       --gpu-kernel-outlining                                 -   Outline gpu.launch bodies to kernel functions
-        --data-layout-str=<string>                           - String containing the data layout specification to be attached to the GPU kernel module
+        --data-layout-str=<string>                           - String description of the data layout
       --gpu-launch-sink-index-computations                   -   Sink index computations into gpu.launch body
       --gpu-map-parallel-loops                               -   Greedily maps loops to GPU hardware dimensions.
       --gpu-module-to-binary                                 -   Transforms a GPU module into a GPU binary.
         --format=<string>                                    - The target representation of the compilation process.
         -l <string>                                          - Extra files to link to.
         --opts=<string>                                      - Command line options to pass to the tools.
+        --section=<string>                                   - ELF section where binary is to be located.
         --toolkit=<string>                                   - Toolkit path.
       --gpu-to-llvm                                          -   Convert GPU dialect to LLVM dialect with GPU runtime calls
+        --intersperse-sizes-for-kernels                      - Inserts a size_t argument following each memref argument, containing the static size in bytes of the buffer. Incompatible arguments are rejected. This is intended for use by the Vulkan runtime with the kernel bare pointer calling convention, to enable dynamic binding of buffers as arguments without static type info.
         --use-bare-pointers-for-host                         - Use bare pointers to pass memref arguments to host functions. All memrefs must have static shape.
         --use-bare-pointers-for-kernels                      - Use bare pointers to pass memref arguments to kernels. The kernel must use the same setting for this option.
       --inline                                               -   Inline function calls
@@ -457,7 +532,6 @@ General options:
         --max-iterations=<uint>                              - Maximum number of iterations when inlining within an SCC
         --op-pipelines=<pass-manager>                        - Callable operation specific optimizer pipelines (in the form of `dialect.op(pipeline)`)
       --int-range-optimizations                              -   Do optimizations based on integer range analysis
-      --launch-func-to-vulkan                                -   Convert vulkanLaunch external call to Vulkan runtime external calls
       --lift-cf-to-scf                                       -   Lift ControlFlow dialect to SCF dialect
       --linalg-block-pack-matmul                             -   Convert linalg matmul ops to block layout and back
         --allow-padding                                      - Allow packing padding
@@ -470,6 +544,7 @@ General options:
         --rhs-transpose-outer-blocks                         - Transpose RHS outer block layout [KB][NB] -> [NB][KB]
       --linalg-detensorize                                   -   Detensorize linalg ops
         --aggressive-mode                                    - Detensorize all ops that qualify for detensoring along with branch operands and basic-block arguments.
+      --linalg-fold-into-elementwise                         -   Fold transform, broadcast and other ops into elementwise
       --linalg-fold-unit-extent-dims                         -   Remove unit-extent dimension in Linalg ops on tensors
         --use-rank-reducing-slices                           - Generate rank-reducing slices instead of reassociative reshapes
       --linalg-fuse-elementwise-ops                          -   Fuse elementwise operations on tensors
@@ -483,8 +558,9 @@ General options:
       --llvm-request-c-wrappers                              -   Request C wrapper emission for all functions
       --loop-invariant-code-motion                           -   Hoist loop invariant instructions outside of the loop
       --loop-invariant-subset-hoisting                       -   Hoist loop invariant subset ops outside of the loop
-      --lower-affine                                         -   Lower Affine operations to a combination of Standard and SCF operations
+      --lower-affine                                         -   Lower Affine operations to a combination of Arith and SCF operations
       --lower-host-to-llvm                                   -   Lowers the host module code and `gpu.launch_func` to LLVM
+      --lower-quant-ops                                      -   Lower quant.dcast and quant.qcast ops
       --lower-sparse-foreach-to-scf                          -   Decompose a complex sparse operation into multiple stages
       --lower-sparse-iteration-to-scf                        -   lower sparse_tensor.iterate/coiterate into scf loops
       --lower-sparse-ops-to-foreach                          -   Applies sparse tensor rewriting rules after sparsification
@@ -495,9 +571,12 @@ General options:
         --lowering-strategy=<value>                          - Select the strategy to control how multi_reduction is lowered.
     =inner-parallel                                    -   Lower multi_reduction into outer-reduction and inner-parallel ops.
     =inner-reduction                                   -   Lower multi_reduction into outer-parallel and inner-reduction ops.
+      --lower-vector-to-from-elements-to-shuffle-tree        -   Lower `vector.to_elements` and `vector.from_elements` to a tree of `vector.shuffle` operations
       --map-memref-spirv-storage-class                       -   Map numeric MemRef memory spaces to SPIR-V storage classes
         --client-api=<string>                                - The client API to use for populating mappings
-      --math-legalize-to-f32                                 -   Legalize floating-point math ops on low-precision floats
+      --math-extend-to-supported-types                       -   Legalize floating-point math ops on low-precision floats
+        --extra-types=<string>                               - MLIR types with arithmetic support on a given target (f64 and f32 are implicitly supported)
+        --target-type=<string>                               - MLIR type to convert the unsupported source types to
       --math-uplift-to-fma                                   -   Uplift arith ops to math.fma.
       --mem2reg                                              -   Promotes memory slots into values.
         --region-simplify                                    - Perform control flow optimizations to the region tree
@@ -507,6 +586,7 @@ General options:
       --mesh-spmdization                                     -   Partition a function into SPMD form.
       --mlprogram-pipeline-globals                           -   Optimize `ml_program` global operations for read and store
       --normalize-memrefs                                    -   Normalize memrefs
+      --normalize-quant-types                                -   Normalize generic quantized types to specific quantized types
       --nvgpu-optimize-shared-memory                         -   Optimizes accesses to shard memory memrefs in order to reduce bank conflicts.
       --nvvm-attach-target                                   -   Attaches an NVVM target attribute to a GPU Module.
         -O <uint>                                            - Optimization level.
@@ -516,24 +596,34 @@ General options:
         --ftz                                                - Enable flush to zero for denormals.
         -l <string>                                          - Extra bitcode libraries paths to link to.
         --module=<string>                                    - Regex used to identify the modules to attach the target to.
+        --ptxas-cmd-options=<string>                         - Command line options passed to downstream compiler
         --triple=<string>                                    - Target triple.
       --one-shot-bufferize                                   -   One-Shot Bufferize
         --allow-return-allocs-from-loops                     - Allows returning/yielding new allocations from a loop.
         --allow-unknown-ops                                  - Allows unknown (not bufferizable) ops in the input IR.
         --analysis-fuzzer-seed=<uint>                        - Test only: Analyze ops in random order with a given seed (fuzzer)
         --analysis-heuristic=<string>                        - Heuristic that control the IR traversal during analysis
+        --buffer-alignment=<ulong>                           - Sets the alignment of newly allocated buffers.
         --bufferize-function-boundaries                      - Bufferize function boundaries (experimental).
         --check-parallel-regions                             - Account for parallel regions in RaW analysis.
         --copy-before-write                                  - Skip the analysis. Make a buffer copy on every write.
         --dialect-filter=<string>                            - Restrict bufferization to ops from these dialects.
         --dump-alias-sets                                    - Test only: Annotate tensor IR with alias sets
-        --function-boundary-type-conversion=<string>         - Controls layout maps when bufferizing function signatures.
+        --function-boundary-type-conversion=<value>          - Controls layout maps when bufferizing function signatures.
+    =infer-layout-map
+    =identity-layout-map
+    =fully-dynamic-layout-map
         --must-infer-memory-space                            - The memory space of an memref types must always be inferred. If unset, a default memory space of 0 is used otherwise.
         --no-analysis-func-filter=<string>                   - Skip analysis of functions with these symbol names.Set copyBeforeWrite to true when bufferizing them.
         --print-conflicts                                    - Test only: Annotate IR with RaW conflicts. Requires test-analysis-only.
         --test-analysis-only                                 - Test only: Only run inplaceability analysis and annotate IR
-        --unknown-type-conversion=<string>                   - Controls layout maps for non-inferrable memref types.
-      --openacc-legalize-data                                -   Legalize the data in the compute region
+        --unknown-type-conversion=<value>                    - Controls layout maps for non-inferrable memref types.
+    =infer-layout-map
+    =identity-layout-map
+    =fully-dynamic-layout-map
+        --use-encoding-for-memory-space                      - Use the Tensor encoding attribute for the memory space. Exclusive to the 'must-infer-memory-space' option
+      --openacc-legalize-data-values                         -   Legalizes SSA values in compute regions with results from data clause operations
+        --apply-to-acc-data-construct                        - Replaces varPtr uses with accPtr for acc compute regions contained within acc.data or acc.declare region.
         --host-to-device                                     - Replace varPtr uses with accPtr if true. Replace accPtr uses with varPtr if false
       --optimize-allocation-liveness                         -   This pass optimizes the liveness of temp allocations in the input function
       --outline-shape-computation                            -   Using shape.func to preserve shape computation
@@ -548,6 +638,7 @@ General options:
         --max-alloc-size-in-bytes=<uint>                     - Maximal size in bytes to promote allocations to stack.
         --max-rank-of-allocated-memref=<uint>                - Maximal memref rank to promote dynamic buffers.
       --reconcile-unrealized-casts                           -   Simplify and eliminate unrealized conversion casts
+      --reify-result-shapes                                  -   Reifies the results of `tensor::PadOp` and `tensor::ConcatOp`.
       --remove-dead-values                                   -   Remove dead values
       --remove-shape-constraints                             -   Replace all cstr_ ops with a true witness
       --resolve-ranked-shaped-type-result-dims               -   Resolve memref.dim of result values of ranked shape type
@@ -567,7 +658,6 @@ General options:
         --unsafe-math                                        - Enable unsafe math opt.
         --wave64                                             - Use Wave64 mode.
       --sccp                                                 -   Sparse Conditional Constant Propagation
-      --scf-bufferize                                        -   Bufferize the scf dialect.
       --scf-for-loop-canonicalization                        -   Canonicalize operations within scf.for loop bodies
       --scf-for-loop-peeling                                 -   Peel `for` loops at their upper bounds.
         --peel-front                                         - Peel the first iteration out of the loop.
@@ -586,10 +676,19 @@ General options:
         --data-layout=<string>                               - String description (LLVM format) of the data layout that is expected on the produced module
       --shape-to-shape-lowering                              -   Legalize Shape dialect to be convertible to Arith
       --sharding-propagation                                 -   sharding propagation
+        --traversal=<value>                                  - Traversal order to use for sharding propagation:
+    =forward                                           -   Forward only traversal.
+    =backward                                          -   backward only traversal.
+    =forward-backward                                  -   forward-backward traversal.
+    =backward-forward                                  -   backward-forward traversal.
       --slice-analysis-test                                  -   Test Slice analysis functionality.
         --omit-block-arguments                               - Test Slice analysis with multiple blocks but slice omiting block arguments
       --snapshot-op-locations                                -   Generate new locations from the current IR
         --filename=<string>                                  - The filename to print the generated IR
+        --pretty-debuginfo                                   - Print pretty debug info in MLIR output
+        --print-debuginfo                                    - Print debug info in MLIR output
+        --print-local-scope                                  - Print with local scope and inline information (eliding aliases for attributes, types, and locations
+        --print-op-generic                                   - Print the generic op form
         --tag=<string>                                       - A tag to use when fusing the new locations with the original. If unset, the locations are replaced.
       --sparse-assembler                                     -   Add [dis]assemble operations on external sparse tensors
         --direct-out                                         - Directly returns buffers externally
@@ -658,11 +757,13 @@ General options:
       --sroa                                                 -   Scalar Replacement of Aggregates
       --stage-sparse-ops                                     -   Decompose a complex sparse operation into multiple stages
       --strip-debuginfo                                      -   Strip debug info from all operations
+      --strip-func-quant-types                               -   Strip quantized types from function headers
       --symbol-dce                                           -   Eliminate dead symbols
       --symbol-privatize                                     -   Mark symbols private
         --exclude=<string>                                   - Comma separated list of symbols that should not be marked private
       --test-affine-access-analysis                          -   Tests affine memory access analysis utility
       --test-affine-data-copy                                -   Tests affine data copy utility functions.
+        --capacity-kib=<ulong>                               - Test copy generation enforcing a limit of capacity (default: unlimited)
         --for-memref-region                                  - Test copy generation for a single memref region
         --memref-filter                                      - Enable memref filter testing in affine data copy optimization
       --test-affine-loop-unswitch                            -   Tests affine loop unswitching / if/else hoisting
@@ -680,6 +781,8 @@ General options:
       --test-arm-sme-tile-allocation                         -   Tests SME 'virtual tile' allocation
         --dump-tile-live-ranges                              - Dump the live ranges of SME tiles (for debugging)
         --preprocess-only                                    - Only preprocess IR so it is ready for tile allocation (but do not allocate any tiles)
+      --test-bit-width-constrained-vector-linearize          -   Linearizes ND vectors for N >= 2 into 1D vectors, with constraints in inner-most dimension's bit width.
+        --target-vector-bitwidth=<uint>                      - Minimum vector bitwidth to enable the flattening transformation
       --test-block-is-in-loop                                -   Test mlir::blockIsInLoop()
       --test-bytecode-roundtrip                              -   Test pass to implement bytecode roundtrip tests.
         --test-dialect-version=<value>                       - Specifies the test dialect version to emit and parse
@@ -689,10 +792,14 @@ General options:
       --test-clone                                           -   Test clone of op
       --test-commutativity-utils                             -   Test the functionality of the commutativity utility
       --test-compose-subview                                 -   Test combining composed subviews
-      --test-constant-fold                                   -   Test operation constant folding
       --test-control-flow-sink                               -   Test control-flow sink pass
       --test-convert-call-op                                 -   Tests conversion of `func.call` to `llvm.call` in presence of custom types
       --test-convert-func-op                                 -   Tests conversion of `func.func` to `llvm.func` for different attributes
+      --test-convert-to-spirv                                -   Conversion to SPIR-V pass only used for internal tests.
+        --convert-gpu-modules                                - Clone and convert GPU modules
+        --nest-in-gpu-module                                 - Put converted SPIR-V module inside the gpu.module instead of alongside it.
+        --run-signature-conversion                           - Run function signature conversion to convert vector types
+        --run-vector-unrolling                               - Run vector unrolling to convert vector types in function bodies
       --test-create-vector-broadcast                         -   Test optimization transformations for transfer ops
       --test-data-layout-query                               -   Test data layout queries
       --test-dead-code-analysis                              -   
@@ -715,7 +822,9 @@ General options:
         --vscale-min=<uint>                                  - Minimum possible value of vscale.
       --test-emulate-narrow-int                              -   Function pass to test Narrow Integer Emulation
         --arith-compute-bitwidth=<uint>                      - arith computation bit width
+        --disable-atomic-rmw                                 - disable atomic read-modify-write and prefer generating normal sequence
         --memref-load-bitwidth=<uint>                        - memref load/store emulation bit width
+        --skip-memref-type-conversion                        - disable memref type conversion (to test failures)
       --test-expand-math                                     -   Test expanding math
       --test-extract-fixed-outer-loops                       -   test application of parametric tiling to the outer loops so that the ranges of outer loops become static
         --test-outer-loop-sizes=<long>                       - fixed number of iterations that the outer loops should have
@@ -735,9 +844,17 @@ General options:
       --test-gpu-rewrite                                     -   Applies all rewrite patterns within the GPU dialect.
       --test-gpu-subgroup-reduce-lowering                    -   Applies gpu.subgroup_reduce lowering patterns.
         --expand-to-shuffles                                 - Expand subgroup_reduce ops to shuffle ops.
+        --target=<string>                                    - Target backend name which will be used to provide compatible lowerings of subgroup reduce.
+      --test-greedy-patterns                                 -   Run test dialect patterns
+        --cse-constants                                      - Whether to CSE constants
+        --fold                                               - Whether to fold
+        --max-iterations=<int>                               - Max. iterations in the GreedyRewriteConfig
+        --top-down                                           - Seed the worklist in general top-down order
       --test-inline                                          -   Test inlining region calls
+      --test-inline-callback                                 -   Test inlining region calls with call back functions
       --test-interface-pass                                  -   Test an interface pass (running on FunctionOpInterface) in the pass manager
       --test-ir-visitors                                     -   Test various visitors.
+      --test-irdl-conversion-check                           -   Checks the convertability of an irdl dialect
       --test-last-modified                                   -   
         --assume-func-writes                                 - assume external functions have write effect on all arguments
         --interprocedural                                    - perform interprocedural analysis
@@ -767,32 +884,35 @@ General options:
         --peeled-loops=<long>                                - Loops to be peeled when test-tile-pattern
         --skip-partial                                       - Skip loops inside partial iterations during peeling
         --test-bubble-up-extract-slice-op-pattern            - Test rewrite of linalgOp + extract_slice into extract_slice + linalgOp
+        --test-decompose-linalg-pack                         - Test transform that generalizes pack ops into a sequence of tensor and Linalg ops
+        --test-decompose-pad-tensor                          - Test transform pad tensor by copying with generic ops
+        --test-decompose-tensor-unpack                       - Test transform that generalizes unpack ops into a sequence of tensor and Linalg ops
         --test-decompose-winograd-ops                        - Test decompose Winograd ops
         --test-erase-unnecessary-inputs                      - Test patterns to erase unnecessary inputs
         --test-erase-unused-operands-and-results             - Test patterns to erase unused operands and results
-        --test-generalize-pad-tensor                         - Test transform pad tensor by copying with generic ops
-        --test-generalize-tensor-pack                        - Test transform that generalizes pack ops into a sequence of tensor and Linalg ops
-        --test-generalize-tensor-unpack                      - Test transform that generalizes unpack ops into a sequence of tensor and Linalg ops
-        --test-linalg-to-vector-patterns                     - Test a set of patterns that rewrite a linalg contraction in vector.contract form
+        --test-fold-into-pack-and-unpack                     - Test folding ops into linalg.pack and linalg.unpack
+        --test-fold-into-pack-and-unpack-control             - Test controlling folding ops into linalg.pack and linalg.unpack
         --test-patterns                                      - Test a mixed set of patterns
+        --test-simplify-pack-unpack-patterns                 - Test patterns to simplify linalg.pack and linalg.unpack
         --test-swap-extract-slice-with-fill-pattern          - Test patterns to swap tensor.extract_slice(linalg.fill())
         --test-swap-subtensor-padtensor                      - Test rewrite of subtensor(tensor.pad) into tensor.pad(subtensor)
         --test-vector-transfer-forwarding-patterns           - Test a fused pass that forwards memref.copy to vector.transfer
         --test-winograd-conv2d                               - Test transform conv2d by Winograd conv2d algorithm
         --tile-sizes=<long>                                  - Linalg tile sizes for test-tile-pattern
       --test-liveness-analysis                               -   
+      --test-llvm-legalize-patterns                          -   Run LLVM dialect legalization patterns
       --test-loop-fusion                                     -   Tests loop fusion utility functions.
         --test-loop-fusion-dependence-check                  - Enable testing of loop fusion dependence check
         --test-loop-fusion-slice-computation                 - Enable testing of loop fusion slice computation
-        --test-loop-fusion-transformation                    - Enable testing of loop fusion transformation
+        --test-loop-fusion-utilities                         - Enable testing of loop fusion transformation utilities
       --test-loop-permutation                                -   Tests affine loop permutation utility
         --permutation-map=<uint>                             - Specify the loop permutation
       --test-loop-unrolling                                  -   Tests loop unrolling transformation
         --annotate                                           - Annotate unrolled iterations.
         --loop-depth=<uint>                                  - Loop depth.
         --unroll-factor=<ulong>                              - Loop unroll factor.
+        --unroll-full                                        - Full unroll loops.
         --unroll-up-to-factor                                - Loop unroll up to factor.
-      --test-lower-to-arm-neon                               -   Tests lower to arm Neon.
       --test-make-isolated-from-above                        -   Test making a region isolated from above
         --clone-ops-with-no-operands                         - Test case with cloning of operations with no operands
         --clone-ops-with-operands                            - Test case with cloning of operations with no operands
@@ -807,6 +927,7 @@ General options:
       --test-memref-bound-check                              -   Check memref access bounds
       --test-memref-dependence-check                         -   Checks dependences between all pairs of memref accesses.
       --test-memref-stride-calculation                       -   Test operation constant folding
+      --test-memref-to-llvm-with-transforms                  -   Tests conversion of MemRef dialects + `func.func` to LLVM dialect with MemRef transforms.
       --test-merge-blocks                                    -   Test Merging operation in ConversionPatternRewriter
       --test-mesh-all-slice-op-lowering                      -   Test lowering of all-slice.
       --test-mesh-process-multi-index-op-lowering            -   Test lowering of mesh.process_multi_index op.
@@ -821,10 +942,6 @@ General options:
         --interprocedural                                    - perform interprocedural analysis
       --test-nvgpu-mmasync-f32-to-tf32-patterns              -   Test patterns to convert mma.sync on f32 with tf32 precision
         --precision=<string>                                 - Target nvgpu.mma.sync on f32 input with tf32 or tf32x3 precision
-      --test-one-to-n-type-conversion                        -   Test pass for 1:N type conversion
-        --convert-func-ops                                   - Enable conversion on func ops
-        --convert-scf-ops                                    - Enable conversion on scf ops
-        --convert-tuple-ops                                  - Enable conversion on tuple ops
       --test-opaque-loc                                      -   Changes all leaf locations to opaque locations
       --test-operations-equality                             -   Test operations equality.
       --test-options-pass                                    -   Test options parsing capabilities
@@ -835,6 +952,8 @@ General options:
         --list=<int>                                         - Example list option
         --string=<string>                                    - Example string option
         --string-list=<string>                               - Example string list option
+      --test-options-pass-a                                  -   Test superset options parsing capabilities - subset A
+      --test-options-pass-b                                  -   Test superset options parsing capabilities - subset B
       --test-options-super-pass                              -   Test options of options parsing capabilities
         --list=<value>                                       - Example list of PassPipelineOptions option
       --test-pass-crash                                      -   Test a pass in the pass manager that always crashes
@@ -842,11 +961,10 @@ General options:
         --emit-invalid-ir                                    - Emit invalid IR
         --signal-pass-failure                                - Trigger a pass failure
       --test-pass-failure                                    -   Test a pass in the pass manager that always fails
+        --gen-diagnostics                                    - Generate a diagnostic message
       --test-pass-invalid-parent                             -   Test a pass in the pass manager that makes the parent operation invalid
+      --test-pass-state-extension-communication              -   test state communciation between a mlir pass and transform ops
       --test-pattern-selective-replacement                   -   Test selective replacement in the PatternRewriter
-      --test-patterns                                        -   Run test dialect patterns
-        --max-iterations=<int>                               - Max. iterations in the GreedyRewriteConfig
-        --top-down                                           - Seed the worklist in general top-down order
       --test-pdl-bytecode-pass                               -   Test PDL ByteCode functionality
       --test-pdll-pass                                       -   Test PDLL functionality
       --test-print-callgraph                                 -   Print the contents of a constructed callgraph.
@@ -877,6 +995,7 @@ General options:
       --test-scf-while-op-builder                            -   test build functions of scf.while
       --test-shape-function-report                           -   Test pass to report associated shape functions
       --test-side-effects                                    -   Test side effects interfaces
+      --test-single-fold                                     -   Test single-pass operation folding and dead constant elimination
       --test-spirv-entry-point-abi                           -   Set the spirv.entry_point_abi attribute on GPU kernel function within the module, intended for testing only
         --subgroup-size=<int>                                - Subgroup size to use for all gpu.func kernels in the module
         --target-width=<int>                                 - Specify the component width of floating-point instructions
@@ -902,13 +1021,14 @@ General options:
         --test-expand-shape-bubbling                         - Test folding of expand_shape/collapse_shape
         --test-fold-consecutive-insert-extract-slice         - Test folding consecutive tensor.insert_slice/tensor.extract_slice
         --test-fold-constant-extract-slice                   - Test folding arith.constant and tensor.extract_slice
-        --test-fold-into-pack-and-unpack                     - Test folding ops into tensor.pack and tensor.unpack
+        --test-fold-extract-from-collapse-shape              - Test folding of extract from collapse_shape
         --test-reassociative-reshape-folding                 - Test folding of expand_shape/collapse_shape
         --test-rewrite-extract-slice-from-collapse-shape     - Test swapping tensor.extract_slice of a collapse_shape with loop nest
-        --test-simplify-pack-unpack-patterns                 - Test patterns to simplify tensor.pack and tensor.unpack
         --test-tracking-listener                             - Test tensor TrackingListener for the transform dialect
         --use-foreach                                        - Use the scf.forall operation when generating loop nests for the extract_slice of collapse_shape pattern
+      --test-tensorlike-bufferlike                           -   Module pass to test custom types that implement TensorLike / BufferLike interfaces
       --test-topological-sort-analysis                       -   Test topological sorting of ops
+      --test-tosa-op-availability                            -   Test Tosa op availability
       --test-trait-folder                                    -   Run trait folding
       --test-transform-dialect-erase-schedule                -   erase transform dialect schedule from the IR
       --test-type-interfaces                                 -   Test type interface support.
@@ -920,14 +1040,13 @@ General options:
       --test-vector-extract-strided-slice-lowering           -   Test lowering patterns that converts vector.extract_strided_slice into a chain of vector.extract and vector.insert ops
       --test-vector-gather-lowering                          -   Test patterns that lower the gather op in the vector conditional loads
       --test-vector-linearize                                -   Linearizes ND vectors for N >= 2 into 1D vectors
-        --target-vector-bitwidth=<uint>                      - Minimum vector bitwidth to enable the flattening transformation
       --test-vector-reduction-to-contract-patterns           -   Test patterns to convert multireduce op to contract and combine broadcast/transpose to contract
       --test-vector-reduction-to-spirv-dot-prod              -   Test lowering patterns that converts vector.reduction to SPIR-V integer dot product ops
       --test-vector-scan-lowering                            -   Test lowering patterns that lower the scan op in the vector dialect
-      --test-vector-sink-patterns                            -   Test lowering patterns that eliminate redundant brodacast and transpose operations.
+      --test-vector-sink-patterns                            -   Test lowering patterns that eliminate redundant broadcast and transpose operations.
       --test-vector-to-vector-lowering                       -   Test lowering patterns between ops in the vector dialect
         --unroll                                             - Include unrolling
-      --test-vector-transfer-collapse-inner-most-dims        -   Test lowering patterns that reducedes the rank of the vector transfer memory and vector operands.
+      --test-vector-transfer-collapse-inner-most-dims        -   Test lowering patterns that reduces the rank of the vector transfer memory and vector operands.
       --test-vector-transfer-flatten-patterns                -   Test patterns to rewrite contiguous row-major N-dimensional vector.transfer_{read,write} ops into 1D transfers
         --target-vector-bitwidth=<uint>                      - Minimum vector bitwidth to enable the flattening transformation. For scalable vectors this is the base size, i.e. the size corresponding to vscale=1.
       --test-vector-transfer-unrolling-patterns              -   Test lowering patterns to unroll transfer ops in the vector dialect
@@ -940,21 +1059,26 @@ General options:
         --distribute-transfer-write                          - Test distribution of transfer write
         --hoist-uniform                                      - Test hoist uniform
         --max-transfer-write-elements=<uint>                 - Maximum number of transfer write elements to distribute
-        --propagate-distribution                             - Test distribution propgation
+        --propagate-distribution                             - Test distribution propagation
         --rewrite-warp-ops-to-scf-if                         - Lower vector.warp_execute_on_lane0 to scf.if op
       --test-verify-uselistorder                             -   Verify that roundtripping the IR to bytecode preserves the order of the uselists
         --rng-seed=<uint>                                    - Specify an input random seed
+      --test-walk-pattern-rewrite-driver                     -   Run test walk pattern rewrite driver
+        --dump-notifications                                 - Print rewrite listener notifications
       --test-wrap-scf-while-loop-in-zero-trip-check          -   test scf::wrapWhileLoopInZeroTripCheck
         --force-create-check                                 - Force to create zero-trip-check.
       --test-written-to                                      -   
         --assume-func-writes                                 - assume external functions have write effect on all arguments
         --interprocedural                                    - perform interprocedural analysis
+      --test-xegpu-unrolling-patterns                        -   Test lowering patterns to unroll ops in the xegpu dialect
       --topological-sort                                     -   Sort regions without SSA dominance in topological order
+      --tosa-convert-integer-type-to-signless                -   Convert integer types to signless
       --tosa-infer-shapes                                    -   Propagate shapes across TOSA operations
       --tosa-layerwise-constant-fold                         -   Fold layerwise operations on constant tensors
         --aggressive-reduce-constant                         - Always perform the reduce constant optimizationMay add more tosa.const but would reduce runtime calculations
       --tosa-make-broadcastable                              -   TOSA rank Reshape to enable Broadcasting
       --tosa-optional-decompositions                         -   Applies Tosa operations optional decompositions
+      --tosa-reduce-transposes                               -   Reduce transposes through other operators
       --tosa-test-quant-utils                                -   TOSA Test: Exercise the APIs in QuantUtils.cpp.
       --tosa-to-arith                                        -   Lower TOSA to the Arith dialect
         --include-apply-rescale                              - Whether to include the lowering for tosa.apply_rescale to arith
@@ -968,14 +1092,12 @@ General options:
       --tosa-to-scf                                          -   Lower TOSA to the SCF dialect
       --tosa-to-tensor                                       -   Lower TOSA to the Tensor dialect
       --tosa-validate                                        -   Validates TOSA dialect
+        --allow-invalid-op-datatype-combinations             - Disable checks for operations that are determined to be invalid due to their operand/result datatypes not aligning with the 'Supported Data Types' sections of the specifciation
+        --extension=<string>                                 - Validate if operations match for the given extension set
         --level=<value>                                      - Validate if operator parameters are within specfication for the given level
     =8k                                                -   Ranges are expected to be sufficient for applications with frame sizes up to 8K.
     =none                                              -   Allows the full range of arguments specified by the operations according to the operation data types.
-        --profile=<value>                                    - Validate if operations match for the given profile
-    =bi                                                -   Use Base Inference profile.
-    =mi                                                -   Use Main Inference profile.
-    =mt                                                -   Use Main Training profile.
-    =undefined                                         -   Do not define a profile.
+        --profile=<string>                                   - Validate if operations match for the given profile set
         --strict-op-spec-alignment                           - Verify if the properties of certain operations align the spec requirement
       --transform-dialect-check-uses                         -   warn about potential use-after-free in the transform dialect
       --transform-infer-effects                              -   infer transform side effects for symbols
@@ -992,7 +1114,21 @@ General options:
         --print-control-flow-edges                           - Print control flow edges
         --print-data-flow-edges                              - Print data flow edges
         --print-result-types                                 - Print result types of operations
+      --wrap-emitc-func-in-class                             -   Wrap functions in classes, using arguments as fields.
+        --named-attribute=<string>                           - Attribute key used to extract field names from function argument's dictionary attributes
+      --xegpu-blocking                                       -   Block XeGPU ops into smaller size.
       --xegpu-fold-alias-ops                                 -   Fold alias ops into XeGPU ops
+      --xegpu-propagate-layout                               -   Propagate and assign XeGPU layout information
+        --print-analysis-only                                - Print the result of layout propagation analysis and exit.
+      --xegpu-subgroup-distribute                            -   Distribute XeGPU ops to work items
+      --xegpu-wg-to-sg-distribute                            -   Transform WorkGroup level XeGPU code to SubGroup level
+      --xevm-attach-target                                   -   Attaches a XeVM target attribute to a GPU Module.
+        -O <uint>                                            - Optimization level.
+        --chip=<string>                                      - Target chip.
+        --cmd-options=<string>                               - Command line options passed to downstream compiler
+        -l <string>                                          - Extra bitcode libraries paths to link to.
+        --module=<string>                                    - Regex used to identify the modules to attach the target to.
+        --triple=<string>                                    - Target triple.
     Pass Pipelines:
       --buffer-deallocation-pipeline                         -   The default pipeline for automatically inserting deallocation operations after one-shot bufferization. Deallocation operations (except `memref.realloc`) may not be present already.
         --private-function-dynamic-ownership                 - Allows to add additional results to private functions to return ownership of returned memrefs to callers. This can avoid spurious buffer clones in the callee.
@@ -1005,6 +1141,7 @@ General options:
         --index-bitwidth=<long>                              - Bitwidth of the index type for the host (warning this should be 64 until the GPU layering is fixed)
         --kernel-bare-ptr-calling-convention                 - Whether to use the bareptr calling convention on the kernel (warning this should be false until the GPU layering is fixed)
         --opt-level=<int>                                    - Optimization level for NVVM compilation
+        --ptxas-cmd-options=<string>                         - Command line options to pass to the downstream compiler.
       --sparsifier                                           -   The standard pipeline for taking sparsity-agnostic IR using the sparse-tensor type, and lowering it to LLVM IR with concrete representations and algorithms for sparse tensors.
         --create-sparse-deallocs                             - Specify if the temporary buffers created by the sparse compiler should be deallocated. For compatibility with core bufferization passes. This option is only used when enable-runtime-library=false.
         --enable-amx                                         - Enables the use of AMX dialect while lowering the vector dialect
@@ -1048,24 +1185,44 @@ General options:
         --string-list=<string>                               - Example string list option
       --test-options-super-pass-pipeline                     -   Parses options of PassPipelineOptions using pass pipeline registration
         --super-list=<value>                                 - Example list of PassPipelineOptions option
+      --test-options-super-set-ab-pipeline                   -   Parses options of PassPipelineOptions using pass pipeline registration
+        --bar                                                - Example boolean option
+        --foo                                                - Example boolean option
       --test-pm-nested-pipeline                              -   Test a nested pipeline in the pass manager
+      --test-spirv-cpu-runner-pipeline                       -   Runs a series of passes for lowering SPIR-V-dialect MLIR to LLVM-dialect MLIR intended for SPIR-V CPU Runner tests.
       --test-textual-pm-nested-pipeline                      -   Test a nested pipeline in the pass manager
+      --test-vulkan-runner-pipeline                          -   Runs a series of passes intended for Vulkan runner tests. Lowers GPU dialect to LLVM dialect for the host and to serialized Vulkan SPIR-V for the device.
+        --spirv-webgpu-prepare                               - Run MLIR transforms used when targetting WebGPU
       --tosa-to-linalg-pipeline                              -   The default pipeline for converting TOSA operators to the equivalent operations using the tensor operations in LinAlg as well as LinAlg named operations.
   --test-legalize-mode=<value>                               - The legalization mode to use with the test driver
     =analysis                                                -   Perform an analysis conversion
     =full                                                    -   Perform a full conversion
     =partial                                                 -   Perform a partial conversion
-  --type-based-intrinsic-cost                                - Calculate intrinsics cost based only on argument types
   --verify-diagnostics                                       - Check that emitted diagnostics match expected-* lines on the corresponding line
+  --verify-diagnostics=<value>                               - Check that emitted diagnostics match expected-* lines on the corresponding line
+    =all                                                     -   Check all diagnostics (expected, unexpected, near-misses)
+    =<empty>                                                 -   Check all diagnostics (expected, unexpected, near-misses)
+    =only-expected                                           -   Check only expected diagnostics
   --verify-each                                              - Run the verifier after each transformation pass
+  --verify-legalizer-debug-locs=<value>                      - Verify that debug locations are handled
+    =none                                                    -   No verification
+    =legalizations                                           -   Verify legalizations
+    =legalizations+artifactcombiners                         -   Verify legalizations and artifact combines
   --verify-region-info                                       - Verify region info (time consuming)
   --verify-roundtrip                                         - Round-trip the IR after parsing and ensure it succeeds
   --vp-counters-per-site=<number>                            - The average number of profile counters allocated per value profiling site.
   --vp-static-alloc                                          - Do static counter allocation for value profiler
-  --write-experimental-debuginfo                             - Write debug info in the new non-intrinsic format. Has no effect if --preserve-input-debuginfo-format=true.
+  --wholeprogramdevirt-cutoff=<uint>                         - Max number of devirtualizations for devirt module pass
 
 Generic Options:
 
   --help                                                     - Display available options (--help-hidden for more)
   --help-list                                                - Display list of available options (--help-list-hidden for more)
   --version                                                  - Display the version of this program
+
+IR2Vec Options:
+
+  --ir2vec-arg-weight=<number>                               - Weight for argument embeddings
+  --ir2vec-opc-weight=<number>                               - Weight for opcode embeddings
+  --ir2vec-type-weight=<number>                              - Weight for type embeddings
+  --ir2vec-vocab-path=<string>                               - Path to the vocabulary file for IR2Vec

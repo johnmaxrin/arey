@@ -16,6 +16,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
+#include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 
 using namespace std;
 using namespace mlir;
@@ -32,7 +33,9 @@ int main(int argc, char *argv[])
     registry.insert<mlir::memref::MemRefDialect>();
     registry.insert<mlir::arith::ArithDialect>();
     registry.insert<mlir::affine::AffineDialect>();
+    registry.insert<mlir::LLVM::LLVMDialect>();
     registry.insert<mlir::arey::AreyDialect>();
+    registry.insert<mlir::omp::OpenMPDialect>();
 
     MLIRContext context;
     context.appendDialectRegistry(registry);
