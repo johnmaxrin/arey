@@ -70,12 +70,22 @@ struct ConvertPrintToLLVM : public OpConversionPattern<PrintOp>
 
         if (auto ptrTy = mlir::dyn_cast<LLVM::LLVMPointerType>(val.getType()))
         {
-            // Get the actual type.  
+            // Get the actual type.
             val = rewriter.create<LLVM::LoadOp>(loc, rewriter.getI32Type(), val);
             rewriter.create<mlir::LLVM::CallOp>(
                 op.getLoc(),
                 fn,
                 mlir::ValueRange{gep, val});
+        }
+        else if (auto ptrTy = mlir::dyn_cast<mlir::IndexType>(val.getType()))
+        {
+            auto castedVal = rewriter.create<mlir::arith::IndexCastOp>(
+                op.getLoc(), rewriter.getIntegerType(64), val);
+
+            rewriter.create<mlir::LLVM::CallOp>(
+                op.getLoc(),
+                fn,
+                mlir::ValueRange{gep, castedVal});
         }
         else
         {
