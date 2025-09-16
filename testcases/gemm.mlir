@@ -5,12 +5,8 @@ module  {
     %1 = arith.index_cast %arg1 : i32 to index
     %2 = arith.index_cast %arg2 : i32 to index
 
-
     affine.for %arg6 = 0 to 128 {
-    
-    arey.print_str "Inside Loop "
-    arey.print %arg6 :index
-
+      arey.print_str "Hi"
       affine.for %arg7 = 0 to 128 {
         affine.store %cst, %arg5[%arg6, %arg7] : memref<?x128xf32>
         affine.for %arg8 = 0 to 128 {

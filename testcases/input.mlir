@@ -32,6 +32,7 @@ module attributes {avial.target_devices = [#dlti.target_device_spec<"type" = "no
     %25 = llvm.call @MPI_Init(%24, %24) : (!llvm.ptr, !llvm.ptr) -> i32
     %26 = llvm.mlir.constant(1140850688 : i64) : i64
     %27 = llvm.trunc %26 : i64 to i32
+    arep.print %27 : i32
     %28 = llvm.mlir.constant(1 : i32) : i32
     %29 = llvm.alloca %28 x i32 : (i32) -> !llvm.ptr
     %30 = llvm.call @MPI_Comm_rank(%27, %29) : (i32, !llvm.ptr) -> i32
