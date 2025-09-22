@@ -167,6 +167,30 @@ struct ConvertPrintStringToLLVM : public OpConversionPattern<PrintStringOp>
     }
 };
 
+struct ConvertAssertToLLVM : public OpConversionPattern<AssertOp>
+{
+    using OpConversionPattern::OpConversionPattern;
+
+    LogicalResult matchAndRewrite(
+        AssertOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override
+    {
+        
+        if(mlir::isa<mlir::IntegerType>(op.getVal1().getType()))
+        {
+           // Compate val1 and val2 for equality. 
+           // If not equal break!  
+        }
+        else
+        {
+            llvm::errs() << "Not an integer type for assertion! \n";
+            return failure();
+        }
+        
+        rewriter.eraseOp(op);
+        return success();
+    }
+};
+
 namespace
 {
 #define GEN_PASS_DEF_CONVERTAREYTOLLVMPASS
@@ -185,13 +209,14 @@ namespace
             ConversionTarget target(*context);
             target.addIllegalOp<arey::PrintOp>();
             target.addIllegalOp<arey::PrintStringOp>();
+            target.addIllegalOp<arey::AssertOp>();
             target.addLegalDialect<LLVM::LLVMDialect>();
             target.markUnknownOpDynamicallyLegal([](Operation *op)
                                                  { return true; });
 
             RewritePatternSet patterns(context);
 
-            patterns.add<ConvertPrintToLLVM, ConvertPrintStringToLLVM>(context);
+            patterns.add<ConvertPrintToLLVM, ConvertPrintStringToLLVM, ConvertAssertToLLVM>(context);
             if (failed(applyPartialConversion(module, target, std::move(patterns))))
             {
                 signalPassFailure();

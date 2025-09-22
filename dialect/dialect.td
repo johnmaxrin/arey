@@ -35,3 +35,10 @@ def PrintStringOp : Op<AreyDialect, "print_str">
     let arguments = (ins StrAttr:$msg);
     let assemblyFormat = "$msg attr-dict";
 }
+
+def AssertOp : Op<AreyDialect, "assert">
+{
+    let summary = "Assert Op";
+    let arguments = (ins AnyType: $val1, AnyAttr: $val2);
+    let assemblyFormat = "$val1 `:` type($val1) `eq` $val2 attr-dict";
+}

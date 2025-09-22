@@ -7,6 +7,7 @@ module  {
 
     affine.for %arg6 = 0 to 128 {
       arey.print_str "Hi"
+      arey.assert %arg0:i32 eq 3
       affine.for %arg7 = 0 to 128 {
         affine.store %cst, %arg5[%arg6, %arg7] : memref<?x128xf32>
         affine.for %arg8 = 0 to 128 {
