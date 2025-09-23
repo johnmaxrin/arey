@@ -5,6 +5,8 @@
 using namespace mlir;
 using namespace mlir::arey;
 
+static mlir::LLVM::LLVMFuncOp getOrInsertAbortFn(mlir::PatternRewriter &rewriter, mlir::Location loc);
+
 struct ConvertPrintToLLVM : public OpConversionPattern<PrintOp>
 {
     using OpConversionPattern::OpConversionPattern;
@@ -176,10 +178,31 @@ struct ConvertAssertToLLVM : public OpConversionPattern<AssertOp>
     {
         
         if(mlir::isa<mlir::IntegerType>(op.getVal1().getType()))
-        {
-           // Compate val1 and val2 for equality. 
-           // If not equal break!  
+        {  
+
+
+
+            // Generate code to
+            // Compare val1 and val2 for equality. 
+            // If not equal break!  
+            rewriter.setInsertionPoint(op);
+            auto val2 = rewriter.create<LLVM::ConstantOp>(op.getLoc(), rewriter.getI32Type(), op.getVal2Attr());
+            auto cond = rewriter.create<LLVM::ICmpOp>(op.getLoc(), rewriter.getI1Type(), LLVM::ICmpPredicate::eq, op.getVal1(), val2);
+            
+            // Create Blocks
+            mlir::Block *curBlk = op->getBlock();
+            mlir::Block *trueBlk = rewriter.splitBlock(curBlk, mlir::Block::iterator(op));
+            mlir::Block *falseBlk = rewriter.createBlock(trueBlk->getParent());
+
+            rewriter.setInsertionPointToEnd(curBlk);
+            rewriter.create<LLVM::CondBrOp>(op.getLoc(), cond, trueBlk, mlir::ValueRange{}, falseBlk, mlir::ValueRange{});
+
+            rewriter.setInsertionPointToStart(falseBlk);
+            auto abortFn = getOrInsertAbortFn(rewriter, op.getLoc());
+            rewriter.create<LLVM::CallOp>(op.getLoc(), abortFn, mlir::ValueRange{});
+            rewriter.create<LLVM::UnreachableOp>(op.getLoc());
         }
+        
         else
         {
             llvm::errs() << "Not an integer type for assertion! \n";
@@ -228,4 +251,25 @@ namespace
 std::unique_ptr<mlir::Pass> mlir::arey::createConvertAreyToLLVMPass()
 {
     return std::make_unique<ConvertAreyToLLVMPass>();
+}
+
+static mlir::LLVM::LLVMFuncOp getOrInsertAbortFn(mlir::PatternRewriter &rewriter, mlir::Location loc) {
+  mlir::ModuleOp module = rewriter.getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+  mlir::OpBuilder::InsertionGuard guard(rewriter);
+
+
+  // Check if "abort" already exists
+  if (auto func = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("abort"))
+    return func;
+
+  // Otherwise insert the declaration at the module level
+  rewriter.setInsertionPointToStart(module.getBody());
+
+  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(
+      rewriter.getI32Type(), /*params=*/{}, /*isVarArg=*/false);
+
+  auto func = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+      loc, "abort", llvmFnType);
+
+  return func;
 }
