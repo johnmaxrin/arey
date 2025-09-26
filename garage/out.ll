@@ -1,8 +1,10 @@
 ; ModuleID = 'LLVMDialectModule'
 source_filename = "LLVMDialectModule"
 
-@msg = internal constant [14 x i8] c"Debug Here: \0A\00"
-@print_format = internal constant [4 x i8] c"%d\0A\00"
+@msg = internal constant [3 x i8] c"Hi\00"
+@assertMsg = internal constant [18 x i8] c"Assertion Failed!\0A"
+
+declare i32 @abort()
 
 declare i32 @printf(ptr, ...)
 
@@ -31,72 +33,80 @@ define void @matmul(i32 %0, i32 %1, i32 %2, ptr %3, ptr %4, i64 %5, i64 %6, i64 
   %46 = sext i32 %0 to i64
   %47 = sext i32 %1 to i64
   %48 = sext i32 %2 to i64
-  %49 = call i32 (ptr, ...) @printf(ptr @print_format)
-  %50 = call i32 (ptr, ...) @printf(ptr @msg)
+  %49 = icmp eq i32 %0, 1000
+  br i1 %49, label %50, label %95
+
+50:                                               ; preds = %24
   br label %51
 
-51:                                               ; preds = %91, %24
-  %52 = phi i64 [ %92, %91 ], [ 0, %24 ]
-  %53 = icmp slt i64 %52, 1000
-  br i1 %53, label %54, label %93
+51:                                               ; preds = %92, %50
+  %52 = phi i64 [ %93, %92 ], [ 0, %50 ]
+  %53 = icmp slt i64 %52, 128
+  br i1 %53, label %54, label %94
 
 54:                                               ; preds = %51
-  br label %55
+  %55 = call i32 (ptr, ...) @printf(ptr @msg)
+  br label %56
 
-55:                                               ; preds = %89, %54
-  %56 = phi i64 [ %90, %89 ], [ 0, %54 ]
-  %57 = icmp slt i64 %56, 1000
-  br i1 %57, label %58, label %91
+56:                                               ; preds = %90, %54
+  %57 = phi i64 [ %91, %90 ], [ 0, %54 ]
+  %58 = icmp slt i64 %57, 128
+  br i1 %58, label %59, label %92
 
-58:                                               ; preds = %55
-  %59 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, 1
-  %60 = mul i64 %52, 128
-  %61 = add i64 %60, %56
-  %62 = getelementptr float, ptr %59, i64 %61
-  store float 0.000000e+00, ptr %62, align 4
-  br label %63
+59:                                               ; preds = %56
+  %60 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, 1
+  %61 = mul i64 %52, 128
+  %62 = add i64 %61, %57
+  %63 = getelementptr float, ptr %60, i64 %62
+  store float 0.000000e+00, ptr %63, align 4
+  br label %64
 
-63:                                               ; preds = %66, %58
-  %64 = phi i64 [ %88, %66 ], [ 0, %58 ]
-  %65 = icmp slt i64 %64, 1000
-  br i1 %65, label %66, label %89
+64:                                               ; preds = %67, %59
+  %65 = phi i64 [ %89, %67 ], [ 0, %59 ]
+  %66 = icmp slt i64 %65, 128
+  br i1 %66, label %67, label %90
 
-66:                                               ; preds = %63
-  %67 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %45, 1
-  %68 = mul i64 %52, 128
-  %69 = add i64 %68, %64
-  %70 = getelementptr float, ptr %67, i64 %69
-  %71 = load float, ptr %70, align 4
-  %72 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %38, 1
-  %73 = mul i64 %64, 128
-  %74 = add i64 %73, %56
-  %75 = getelementptr float, ptr %72, i64 %74
-  %76 = load float, ptr %75, align 4
-  %77 = fmul float %71, %76
-  %78 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, 1
-  %79 = mul i64 %52, 128
-  %80 = add i64 %79, %56
-  %81 = getelementptr float, ptr %78, i64 %80
-  %82 = load float, ptr %81, align 4
-  %83 = fadd float %82, %77
-  %84 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, 1
-  %85 = mul i64 %52, 128
-  %86 = add i64 %85, %56
-  %87 = getelementptr float, ptr %84, i64 %86
-  store float %83, ptr %87, align 4
-  %88 = add i64 %64, 1
-  br label %63
+67:                                               ; preds = %64
+  %68 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %45, 1
+  %69 = mul i64 %52, 128
+  %70 = add i64 %69, %65
+  %71 = getelementptr float, ptr %68, i64 %70
+  %72 = load float, ptr %71, align 4
+  %73 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %38, 1
+  %74 = mul i64 %65, 128
+  %75 = add i64 %74, %57
+  %76 = getelementptr float, ptr %73, i64 %75
+  %77 = load float, ptr %76, align 4
+  %78 = fmul float %72, %77
+  %79 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, 1
+  %80 = mul i64 %52, 128
+  %81 = add i64 %80, %57
+  %82 = getelementptr float, ptr %79, i64 %81
+  %83 = load float, ptr %82, align 4
+  %84 = fadd float %83, %78
+  %85 = extractvalue { ptr, ptr, i64, [2 x i64], [2 x i64] } %31, 1
+  %86 = mul i64 %52, 128
+  %87 = add i64 %86, %57
+  %88 = getelementptr float, ptr %85, i64 %87
+  store float %84, ptr %88, align 4
+  %89 = add i64 %65, 1
+  br label %64
 
-89:                                               ; preds = %63
-  %90 = add i64 %56, 1
-  br label %55
+90:                                               ; preds = %64
+  %91 = add i64 %57, 1
+  br label %56
 
-91:                                               ; preds = %55
-  %92 = add i64 %52, 1
+92:                                               ; preds = %56
+  %93 = add i64 %52, 1
   br label %51
 
-93:                                               ; preds = %51
+94:                                               ; preds = %51
   ret void
+
+95:                                               ; preds = %24
+  %96 = call i32 (ptr, ...) @printf(ptr @assertMsg)
+  %97 = call i32 @abort()
+  unreachable
 }
 
 !llvm.module.flags = !{!0}

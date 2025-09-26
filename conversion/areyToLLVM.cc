@@ -176,19 +176,57 @@ struct ConvertAssertToLLVM : public OpConversionPattern<AssertOp>
     LogicalResult matchAndRewrite(
         AssertOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override
     {
-        
-        if(mlir::isa<mlir::IntegerType>(op.getVal1().getType()))
-        {  
+        auto mod = op->getParentOfType<mlir::ModuleOp>();
 
-
+        if (mlir::isa<mlir::IntegerType>(op.getVal1().getType()))
+        {
 
             // Generate code to
-            // Compare val1 and val2 for equality. 
-            // If not equal break!  
+            // Compare val1 and val2 for equality.
+            // If not equal break!
+
+            // Add a printf.
+
+            std::string assertMsg = "Assertion Failed!\n";
+            auto ctx = rewriter.getContext();
+            auto i8Ty = IntegerType::get(ctx, 8);
+            auto ptrTy = LLVM::LLVMPointerType::get(ctx);
+            auto arrayType = mlir::LLVM::LLVMArrayType::get(i8Ty, assertMsg.size());
+
+            rewriter.setInsertionPointToStart(mod.getBody());
+
+            auto global = rewriter.create<mlir::LLVM::GlobalOp>(
+                op.getLoc(),
+                LLVM::LLVMArrayType::get(i8Ty, assertMsg.size()),
+                true,
+                LLVM::Linkage::Internal,
+                "assertMsg",
+                rewriter.getStringAttr(assertMsg));
+
+            if (!mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf"))
+            {
+                auto printfType = mlir::LLVM::LLVMFunctionType::get(
+                    rewriter.getI32Type(), ptrTy, /*isVarArg=*/true);
+                rewriter.setInsertionPointToStart(mod.getBody());
+                rewriter.create<mlir::LLVM::LLVMFuncOp>(op.getLoc(), "printf", printfType);
+            }
+
+            // End of printf.
+
             rewriter.setInsertionPoint(op);
+
+            // For Printf
+            auto zero = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), rewriter.getI32Type(), rewriter.getI32IntegerAttr(0));
+            auto one = rewriter.create<mlir::LLVM::ConstantOp>(op.getLoc(), rewriter.getI32Type(), rewriter.getI32IntegerAttr(1));
+            auto strPtr = rewriter.create<mlir::LLVM::AddressOfOp>(op.getLoc(), global);
+
+            auto gep = rewriter.create<mlir::LLVM::GEPOp>(op.getLoc(), ptrTy, arrayType, strPtr, mlir::ValueRange{zero, zero});
+
+            // For Printf
+
             auto val2 = rewriter.create<LLVM::ConstantOp>(op.getLoc(), rewriter.getI32Type(), op.getVal2Attr());
             auto cond = rewriter.create<LLVM::ICmpOp>(op.getLoc(), rewriter.getI1Type(), LLVM::ICmpPredicate::eq, op.getVal1(), val2);
-            
+
             // Create Blocks
             mlir::Block *curBlk = op->getBlock();
             mlir::Block *trueBlk = rewriter.splitBlock(curBlk, mlir::Block::iterator(op));
@@ -198,17 +236,30 @@ struct ConvertAssertToLLVM : public OpConversionPattern<AssertOp>
             rewriter.create<LLVM::CondBrOp>(op.getLoc(), cond, trueBlk, mlir::ValueRange{}, falseBlk, mlir::ValueRange{});
 
             rewriter.setInsertionPointToStart(falseBlk);
+
+            // Call printf
+            auto fn = mod.lookupSymbol<mlir::LLVM::LLVMFuncOp>("printf");
+            mlir::LLVM::LLVMFunctionType fnType =
+                dyn_cast<mlir::LLVM::LLVMFunctionType>(fn.getFunctionType());
+
+            rewriter.create<mlir::LLVM::CallOp>(
+                op.getLoc(),
+                fn,
+                mlir::ValueRange{gep});
+
+
+                // Call Abort
             auto abortFn = getOrInsertAbortFn(rewriter, op.getLoc());
             rewriter.create<LLVM::CallOp>(op.getLoc(), abortFn, mlir::ValueRange{});
             rewriter.create<LLVM::UnreachableOp>(op.getLoc());
         }
-        
+
         else
         {
             llvm::errs() << "Not an integer type for assertion! \n";
             return failure();
         }
-        
+
         rewriter.eraseOp(op);
         return success();
     }
@@ -253,23 +304,23 @@ std::unique_ptr<mlir::Pass> mlir::arey::createConvertAreyToLLVMPass()
     return std::make_unique<ConvertAreyToLLVMPass>();
 }
 
-static mlir::LLVM::LLVMFuncOp getOrInsertAbortFn(mlir::PatternRewriter &rewriter, mlir::Location loc) {
-  mlir::ModuleOp module = rewriter.getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
-  mlir::OpBuilder::InsertionGuard guard(rewriter);
+static mlir::LLVM::LLVMFuncOp getOrInsertAbortFn(mlir::PatternRewriter &rewriter, mlir::Location loc)
+{
+    mlir::ModuleOp module = rewriter.getInsertionBlock()->getParentOp()->getParentOfType<mlir::ModuleOp>();
+    mlir::OpBuilder::InsertionGuard guard(rewriter);
 
+    // Check if "abort" already exists
+    if (auto func = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("abort"))
+        return func;
 
-  // Check if "abort" already exists
-  if (auto func = module.lookupSymbol<mlir::LLVM::LLVMFuncOp>("abort"))
+    // Otherwise insert the declaration at the module level
+    rewriter.setInsertionPointToStart(module.getBody());
+
+    auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(
+        rewriter.getI32Type(), /*params=*/{}, /*isVarArg=*/false);
+
+    auto func = rewriter.create<mlir::LLVM::LLVMFuncOp>(
+        loc, "abort", llvmFnType);
+
     return func;
-
-  // Otherwise insert the declaration at the module level
-  rewriter.setInsertionPointToStart(module.getBody());
-
-  auto llvmFnType = mlir::LLVM::LLVMFunctionType::get(
-      rewriter.getI32Type(), /*params=*/{}, /*isVarArg=*/false);
-
-  auto func = rewriter.create<mlir::LLVM::LLVMFuncOp>(
-      loc, "abort", llvmFnType);
-
-  return func;
 }

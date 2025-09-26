@@ -9,7 +9,7 @@ extern void matmul(
     float *C_alloc, float *C_aligned, long C_offset, long C_size0, long C_size1, long C_stride0, long C_stride1);
 
 int main() {
-    int M = 1000, N = 1000, K = 1000;
+    int M = 200, N = 1000, K = 1000;
 
     // Allocate matrices
     float *A = (float*)aligned_alloc(64, M * K * sizeof(float));
