@@ -24,6 +24,7 @@ using namespace mlir;
 #include "includes/areyDialect.h"
 #include "includes/areyOps.h"
 #include "conversion/areyToLLVM.h"
+#include "conversion/removeArey.h"
 #include "mlir/Pass/PassManager.h"
 
 int main(int argc, char *argv[])
@@ -67,7 +68,8 @@ int main(int argc, char *argv[])
 
 
     mlir::PassManager pm(&context);
-    pm.addPass(mlir::arey::createConvertAreyToLLVMPass());
+    //pm.addPass(mlir::arey::createConvertAreyToLLVMPass());
+    pm.addPass(mlir::arey::createRemoveAreyPass());
 
     if (failed(pm.run(module->getOperation()))) {
         llvm::errs() << "Failed to run passes\n";

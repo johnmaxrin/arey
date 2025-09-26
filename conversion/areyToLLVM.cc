@@ -265,9 +265,31 @@ struct ConvertAssertToLLVM : public OpConversionPattern<AssertOp>
     }
 };
 
+
+struct ConvertStartTimeToLLVM : public OpConversionPattern<StartTimeOp>
+{
+    using OpConversionPattern::OpConversionPattern;
+
+    LogicalResult matchAndRewrite(
+        StartTimeOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override
+    {
+
+    }
+};
+ 
+struct ConvertStopTimeToLLVM : public OpConversionPattern<StopTimeOp>
+{
+    using OpConversionPattern::OpConversionPattern;
+
+    LogicalResult matchAndRewrite(
+        StopTimeOp op, OpAdaptor adaptor, ConversionPatternRewriter &rewriter) const override
+    {
+    }
+};
+
 namespace
 {
-#define GEN_PASS_DEF_CONVERTAREYTOLLVMPASS
+#define GEN_PASS_DEF_CONVERTAREYTOLLVMPASS 
 #include "dialect/Passes.h.inc"
 
     struct ConvertAreyToLLVMPass

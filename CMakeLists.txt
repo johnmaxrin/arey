@@ -52,7 +52,7 @@ add_definitions(${NO_RTTI})
 
 
 
-add_library(AREYTOLLVMConversion conversion/areyToLLVM.cc)
+add_library(AREYTOLLVMConversion conversion/areyToLLVM.cc conversion/removeArey.cc)
 target_link_libraries(AREYTOLLVMConversion
   PRIVATE
     MLIRPass
