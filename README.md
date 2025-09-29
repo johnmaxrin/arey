@@ -37,3 +37,5 @@ make
 
 If everything works, you’ll get a demo binary at:
 `./bin/arey-opt`
+
+# 🏆 This project was selected as a finalist at [Segfault Compiler Hackathon](https://segfault.compilertech.org/)
