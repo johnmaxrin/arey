@@ -63,8 +63,8 @@ target_link_libraries(AREYTOLLVMConversion
 )
 
 
-add_llvm_executable(app main.cc libs/areyDialect.cc DEPENDS MLIRAreyDialectIncGen)
-target_link_libraries(app 
+add_llvm_executable(arey-opt main.cc libs/areyDialect.cc DEPENDS MLIRAreyDialectIncGen)
+target_link_libraries(arey-opt 
 
 PRIVATE
         ${dialect_libs}
